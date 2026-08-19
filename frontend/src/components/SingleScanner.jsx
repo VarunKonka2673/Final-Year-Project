@@ -124,6 +124,8 @@ const PRESETS = {
 };
 
 export default function SingleScanner() {
+  const [scanMode, setScanMode] = useState('url'); // 'url' or 'attributes'
+  const [profileUrl, setProfileUrl] = useState('');
   const [formData, setFormData] = useState(PRESETS.crypto_scam.data);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
@@ -160,6 +162,32 @@ export default function SingleScanner() {
     }
   };
 
+  const handleUrlScan = async (e) => {
+    if (e) e.preventDefault();
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(`${API_BASE}/api/predict/profile-link`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ profile_url: profileUrl })
+      });
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || `API Error: ${response.statusText}`);
+      }
+      const data = await response.json();
+      setResult(data);
+      if (data.raw_extracted_features) {
+        setFormData(data.raw_extracted_features);
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to scan profile link.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Compute color scheme based on risk
   const getRiskColor = (score) => {
     if (score >= 75) return { text: 'text-rose-400', bg: 'bg-rose-500/20', border: 'border-rose-500/40', glow: 'glow-border-rose' };
@@ -191,7 +219,7 @@ export default function SingleScanner() {
                 key={key}
                 type="button"
                 onClick={() => applyPreset(key)}
-                className="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800/80 hover:bg-slate-700 text-slate-200 border border-slate-700 transition flex items-center gap-1.5"
+                className="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800/80 hover:bg-slate-700 text-slate-200 border border-slate-700 transition flex items-center gap-1.5 cursor-pointer"
               >
                 <Sparkles className="w-3 h-3 text-cyan-400" />
                 {preset.name}
@@ -201,181 +229,254 @@ export default function SingleScanner() {
         </div>
       </div>
 
+      {/* Scan Mode Tabs */}
+      <div className="flex border-b border-slate-800 pb-px">
+        <button
+          type="button"
+          onClick={() => setScanMode('url')}
+          className={`px-6 py-2.5 text-xs font-bold border-b-2 cursor-pointer transition-all duration-200 ${
+            scanMode === 'url'
+              ? 'border-cyan-400 text-cyan-400 bg-cyan-400/5'
+              : 'border-transparent text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          🔍 Profile Link Analyzer
+        </button>
+        <button
+          type="button"
+          onClick={() => setScanMode('attributes')}
+          className={`px-6 py-2.5 text-xs font-bold border-b-2 cursor-pointer transition-all duration-200 ${
+            scanMode === 'attributes'
+              ? 'border-cyan-400 text-cyan-400 bg-cyan-400/5'
+              : 'border-transparent text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          ⚙️ Detailed Attributes Form
+        </button>
+      </div>
+
       {/* Main Grid: Input Form & Result Dashboard */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         
-        {/* Left Column: Account Profile & Behavioural Form (5 cols) */}
-        <form onSubmit={handleScan} className="lg:col-span-5 space-y-6">
-          <div className="glass-panel p-6 rounded-2xl border border-slate-800 space-y-5">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <span className="text-sm font-semibold text-slate-200 flex items-center gap-2">
-                <Sliders className="w-4 h-4 text-cyan-400" />
-                Account Attributes & Metrics
-              </span>
-              <span className="text-[11px] font-mono text-slate-400">Input Feature Vector</span>
-            </div>
-
-            {/* Profile & Handle */}
-            <div className="grid grid-cols-2 gap-3">
+        {/* Left Column: Form Section (5 cols) */}
+        {scanMode === 'url' ? (
+          <form onSubmit={handleUrlScan} className="lg:col-span-5 space-y-6">
+            <div className="glass-panel p-6 rounded-2xl border border-slate-800 space-y-5">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                <span className="text-sm font-semibold text-slate-200 flex items-center gap-2">
+                  <Cpu className="w-4 h-4 text-cyan-400" />
+                  Profile Link Scanner
+                </span>
+                <span className="text-[11px] font-mono text-slate-400">ML Heuristic Crawler</span>
+              </div>
+              
               <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1">Username Handle</label>
+                <label className="block text-xs font-medium text-slate-300 mb-1.5">Paste Social Profile URL</label>
                 <input
-                  type="text"
-                  value={formData.username}
-                  onChange={(e) => handleInputChange('username', e.target.value)}
-                  className="w-full px-3 py-2 text-xs bg-slate-900/90 border border-slate-700 rounded-lg text-slate-100 focus:outline-none focus:border-cyan-400 font-mono"
-                  placeholder="e.g. crypto_bot_99"
+                  type="url"
+                  value={profileUrl}
+                  onChange={(e) => setProfileUrl(e.target.value)}
+                  className="w-full px-3 py-2.5 text-xs bg-slate-900/90 border border-slate-700 rounded-lg text-slate-100 focus:outline-none focus:border-cyan-400 font-mono placeholder:text-slate-600"
+                  placeholder="e.g. https://x.com/elonmusk"
                   required
                 />
+                <p className="text-[10px] text-slate-500 mt-2 leading-relaxed">
+                  Supports X/Twitter, Instagram, Facebook, LinkedIn, TikTok, and Reddit. Parses profile metadata and runs semantic ML checks to detect artificial accounts.
+                </p>
               </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-3 px-4 rounded-xl font-semibold text-sm bg-gradient-to-r from-cyan-500 via-indigo-600 to-purple-600 hover:from-cyan-400 hover:to-purple-500 text-white shadow-lg shadow-cyan-500/25 transition duration-200 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                {loading ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span>Analyzing Profile Metadata...</span>
+                  </>
+                ) : (
+                  <>
+                    <ShieldCheck className="w-4 h-4" />
+                    <span>Scan Profile Link</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
+        ) : (
+          <form onSubmit={handleScan} className="lg:col-span-5 space-y-6">
+            <div className="glass-panel p-6 rounded-2xl border border-slate-800 space-y-5">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                <span className="text-sm font-semibold text-slate-200 flex items-center gap-2">
+                  <Sliders className="w-4 h-4 text-cyan-400" />
+                  Account Attributes & Metrics
+                </span>
+                <span className="text-[11px] font-mono text-slate-400">Input Feature Vector</span>
+              </div>
+
+              {/* Profile & Handle */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-slate-300 mb-1">Username Handle</label>
+                  <input
+                    type="text"
+                    value={formData.username}
+                    onChange={(e) => handleInputChange('username', e.target.value)}
+                    className="w-full px-3 py-2 text-xs bg-slate-900/90 border border-slate-700 rounded-lg text-slate-100 focus:outline-none focus:border-cyan-400 font-mono"
+                    placeholder="e.g. crypto_bot_99"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-300 mb-1">Display Name</label>
+                  <input
+                    type="text"
+                    value={formData.full_name || ''}
+                    onChange={(e) => handleInputChange('full_name', e.target.value)}
+                    className="w-full px-3 py-2 text-xs bg-slate-900/90 border border-slate-700 rounded-lg text-slate-100 focus:outline-none focus:border-cyan-400"
+                    placeholder="e.g. John Doe"
+                  />
+                </div>
+              </div>
+
+              {/* Bio Text (NLP Target) */}
               <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1">Display Name</label>
-                <input
-                  type="text"
-                  value={formData.full_name || ''}
-                  onChange={(e) => handleInputChange('full_name', e.target.value)}
+                <label className="block text-xs font-medium text-slate-300 mb-1 flex items-center justify-between">
+                  <span>Account Bio Description</span>
+                  <span className="text-[10px] text-cyan-400 font-mono">NLP Keyword & Sentiment Scan</span>
+                </label>
+                <textarea
+                  rows={3}
+                  value={formData.bio}
+                  onChange={(e) => handleInputChange('bio', e.target.value)}
                   className="w-full px-3 py-2 text-xs bg-slate-900/90 border border-slate-700 rounded-lg text-slate-100 focus:outline-none focus:border-cyan-400"
-                  placeholder="e.g. John Doe"
+                  placeholder="Enter user bio..."
                 />
               </div>
-            </div>
 
-            {/* Bio Text (NLP Target) */}
-            <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1 flex items-center justify-between">
-                <span>Account Bio Description</span>
-                <span className="text-[10px] text-cyan-400 font-mono">NLP Keyword & Sentiment Scan</span>
-              </label>
-              <textarea
-                rows={3}
-                value={formData.bio}
-                onChange={(e) => handleInputChange('bio', e.target.value)}
-                className="w-full px-3 py-2 text-xs bg-slate-900/90 border border-slate-700 rounded-lg text-slate-100 focus:outline-none focus:border-cyan-400"
-                placeholder="Enter user bio..."
-              />
-            </div>
-
-            {/* Recent Post Sample */}
-            <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1 flex items-center justify-between">
-                <span>Recent Post / Tweet Snippet</span>
-                <span className="text-[10px] text-indigo-400 font-mono">TF-IDF Vectorized</span>
-              </label>
-              <textarea
-                rows={2}
-                value={formData.recent_post}
-                onChange={(e) => handleInputChange('recent_post', e.target.value)}
-                className="w-full px-3 py-2 text-xs bg-slate-900/90 border border-slate-700 rounded-lg text-slate-100 focus:outline-none focus:border-cyan-400"
-                placeholder="Enter latest sample post..."
-              />
-            </div>
-
-            {/* Numeric Sliders & Indicators */}
-            <div className="grid grid-cols-3 gap-3">
+              {/* Recent Post Sample */}
               <div>
-                <label className="block text-[11px] text-slate-400 mb-1">Followers</label>
-                <input
-                  type="number"
-                  value={formData.follower_count}
-                  onChange={(e) => handleInputChange('follower_count', parseFloat(e.target.value) || 0)}
-                  className="w-full px-2.5 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-lg text-slate-100 font-mono"
+                <label className="block text-xs font-medium text-slate-300 mb-1 flex items-center justify-between">
+                  <span>Recent Post / Tweet Snippet</span>
+                  <span className="text-[10px] text-indigo-400 font-mono">TF-IDF Vectorized</span>
+                </label>
+                <textarea
+                  rows={2}
+                  value={formData.recent_post}
+                  onChange={(e) => handleInputChange('recent_post', e.target.value)}
+                  className="w-full px-3 py-2 text-xs bg-slate-900/90 border border-slate-700 rounded-lg text-slate-100 focus:outline-none focus:border-cyan-400"
+                  placeholder="Enter latest sample post..."
                 />
               </div>
-              <div>
-                <label className="block text-[11px] text-slate-400 mb-1">Following</label>
-                <input
-                  type="number"
-                  value={formData.following_count}
-                  onChange={(e) => handleInputChange('following_count', parseFloat(e.target.value) || 1)}
-                  className="w-full px-2.5 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-lg text-slate-100 font-mono"
-                />
-              </div>
-              <div>
-                <label className="block text-[11px] text-slate-400 mb-1">Age (Days)</label>
-                <input
-                  type="number"
-                  value={formData.account_age_days}
-                  onChange={(e) => handleInputChange('account_age_days', parseFloat(e.target.value) || 1)}
-                  className="w-full px-2.5 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-lg text-slate-100 font-mono"
-                />
-              </div>
-            </div>
 
-            {/* Behavioural Metrics */}
-            <div className="grid grid-cols-2 gap-3 pt-2">
-              <div>
-                <label className="block text-[11px] text-slate-400 mb-1">Posts / Day</label>
-                <input
-                  type="number"
-                  step="0.1"
-                  value={formData.posting_frequency_per_day}
-                  onChange={(e) => handleInputChange('posting_frequency_per_day', parseFloat(e.target.value) || 0)}
-                  className="w-full px-2.5 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-lg text-slate-100 font-mono"
-                />
+              {/* Numeric Sliders & Indicators */}
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-[11px] text-slate-400 mb-1">Followers</label>
+                  <input
+                    type="number"
+                    value={formData.follower_count}
+                    onChange={(e) => handleInputChange('follower_count', parseFloat(e.target.value) || 0)}
+                    className="w-full px-2.5 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-lg text-slate-100 font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] text-slate-400 mb-1">Following</label>
+                  <input
+                    type="number"
+                    value={formData.following_count}
+                    onChange={(e) => handleInputChange('following_count', parseFloat(e.target.value) || 1)}
+                    className="w-full px-2.5 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-lg text-slate-100 font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] text-slate-400 mb-1">Age (Days)</label>
+                  <input
+                    type="number"
+                    value={formData.account_age_days}
+                    onChange={(e) => handleInputChange('account_age_days', parseFloat(e.target.value) || 1)}
+                    className="w-full px-2.5 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-lg text-slate-100 font-mono"
+                  />
+                </div>
               </div>
-              <div>
-                <label className="block text-[11px] text-slate-400 mb-1">Engagement Rate (%)</label>
-                <input
-                  type="number"
-                  step="0.1"
-                  value={formData.avg_engagement_rate}
-                  onChange={(e) => handleInputChange('avg_engagement_rate', parseFloat(e.target.value) || 0)}
-                  className="w-full px-2.5 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-lg text-slate-100 font-mono"
-                />
+
+              {/* Behavioural Metrics */}
+              <div className="grid grid-cols-2 gap-3 pt-2">
+                <div>
+                  <label className="block text-[11px] text-slate-400 mb-1">Posts / Day</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={formData.posting_frequency_per_day}
+                    onChange={(e) => handleInputChange('posting_frequency_per_day', parseFloat(e.target.value) || 0)}
+                    className="w-full px-2.5 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-lg text-slate-100 font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] text-slate-400 mb-1">Engagement Rate (%)</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={formData.avg_engagement_rate}
+                    onChange={(e) => handleInputChange('avg_engagement_rate', parseFloat(e.target.value) || 0)}
+                    className="w-full px-2.5 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-lg text-slate-100 font-mono"
+                  />
+                </div>
               </div>
-            </div>
 
-            {/* Checkbox Toggles */}
-            <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-800/80">
-              <label className="flex items-center space-x-2 text-xs text-slate-300 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={formData.has_profile_pic === 1}
-                  onChange={(e) => handleInputChange('has_profile_pic', e.target.checked ? 1 : 0)}
-                  className="rounded border-slate-700 text-cyan-500 focus:ring-0 bg-slate-900"
-                />
-                <span>Has Avatar</span>
-              </label>
-              <label className="flex items-center space-x-2 text-xs text-slate-300 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={formData.is_verified === 1}
-                  onChange={(e) => handleInputChange('is_verified', e.target.checked ? 1 : 0)}
-                  className="rounded border-slate-700 text-cyan-500 focus:ring-0 bg-slate-900"
-                />
-                <span>Verified Badge</span>
-              </label>
-              <label className="flex items-center space-x-2 text-xs text-slate-300 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={formData.has_url === 1}
-                  onChange={(e) => handleInputChange('has_url', e.target.checked ? 1 : 0)}
-                  className="rounded border-slate-700 text-cyan-500 focus:ring-0 bg-slate-900"
-                />
-                <span>Bio Link URL</span>
-              </label>
-            </div>
+              {/* Checkbox Toggles */}
+              <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-800/80">
+                <label className="flex items-center space-x-2 text-xs text-slate-300 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formData.has_profile_pic === 1}
+                    onChange={(e) => handleInputChange('has_profile_pic', e.target.checked ? 1 : 0)}
+                    className="rounded border-slate-700 text-cyan-500 focus:ring-0 bg-slate-900"
+                  />
+                  <span>Has Avatar</span>
+                </label>
+                <label className="flex items-center space-x-2 text-xs text-slate-300 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formData.is_verified === 1}
+                    onChange={(e) => handleInputChange('is_verified', e.target.checked ? 1 : 0)}
+                    className="rounded border-slate-700 text-cyan-500 focus:ring-0 bg-slate-900"
+                  />
+                  <span>Verified Badge</span>
+                </label>
+                <label className="flex items-center space-x-2 text-xs text-slate-300 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formData.has_url === 1}
+                    onChange={(e) => handleInputChange('has_url', e.target.checked ? 1 : 0)}
+                    className="rounded border-slate-700 text-cyan-500 focus:ring-0 bg-slate-900"
+                  />
+                  <span>Bio Link URL</span>
+                </label>
+              </div>
 
-            {/* Scan Button */}
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3 px-4 rounded-xl font-semibold text-sm bg-gradient-to-r from-cyan-500 via-indigo-600 to-purple-600 hover:from-cyan-400 hover:to-purple-500 text-white shadow-lg shadow-cyan-500/25 transition duration-200 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-            >
-              {loading ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  <span>Running Hybrid AI Matrix...</span>
-                </>
-              ) : (
-                <>
-                  <ShieldCheck className="w-4 h-4" />
-                  <span>Execute Fraud & Bot Analysis</span>
-                </>
-              )}
-            </button>
-          </div>
-        </form>
+              {/* Scan Button */}
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-3 px-4 rounded-xl font-semibold text-sm bg-gradient-to-r from-cyan-500 via-indigo-600 to-purple-600 hover:from-cyan-400 hover:to-purple-500 text-white shadow-lg shadow-cyan-500/25 transition duration-200 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                {loading ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span>Running Hybrid AI Matrix...</span>
+                  </>
+                ) : (
+                  <>
+                    <ShieldCheck className="w-4 h-4" />
+                    <span>Execute Fraud & Bot Analysis</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
+        )}
 
         {/* Right Column: Dynamic Diagnosis & Multi-Model Breakdown (7 cols) */}
         <div className="lg:col-span-7 space-y-6">
@@ -421,10 +522,15 @@ export default function SingleScanner() {
                       
                       {/* Left: Verdict Text */}
                       <div className="space-y-1">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <span className={`text-xs font-mono font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full ${colors.bg} ${colors.text} border ${colors.border}`}>
                             {result.risk_level} RISK LEVEL
                           </span>
+                          {result.platform && (
+                            <span className="text-[11px] font-mono text-indigo-400 bg-indigo-500/10 px-2.5 py-0.5 rounded-full border border-indigo-500/30">
+                              Platform: {result.platform}
+                            </span>
+                          )}
                           <span className="text-xs font-mono text-slate-400">
                             Archetype: <span className="text-cyan-300 font-semibold">{result.predicted_archetype}</span>
                           </span>

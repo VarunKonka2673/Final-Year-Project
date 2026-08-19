@@ -9,14 +9,18 @@ import io
 import json
 import asyncio
 import random
+import time
+from collections import defaultdict
 from typing import Dict, Any, List
 import pandas as pd
 from fastapi import FastAPI, HTTPException, UploadFile, File, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, PlainTextResponse
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from backend.ml.pipeline import SocialGuardPipeline, PIPELINE_PATH, DATA_DIR
 from backend.ml.dataset_generator import generate_socialguard_dataset
+from backend.ml.profile_extractor import ProfileFeatureExtractor
 from backend.api.schemas import AccountInputSchema, BatchAccountInputSchema, RetrainRequestSchema
 
 app = FastAPI(
@@ -25,10 +29,53 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Enable CORS for frontend Vite/React development
+# Custom IP-based Rate Limiter Middleware
+class RateLimitMiddleware(BaseHTTPMiddleware):
+    def __init__(self, app, limit: int = 60, window: int = 60):
+        super().__init__(app)
+        self.limit = limit
+        self.window = window
+        self.requests = defaultdict(list)
+
+    async def dispatch(self, request, call_next):
+        if request.url.path.startswith("/api/"):
+            client_ip = request.client.host if request.client else "unknown"
+            now = time.time()
+            # Clean old logs
+            self.requests[client_ip] = [t for t in self.requests[client_ip] if now - t < self.window]
+            
+            if len(self.requests[client_ip]) >= self.limit:
+                return JSONResponse(
+                    status_code=429,
+                    content={"detail": "Too many requests. Rate limit exceeded (60 req/min). Please try again later."}
+                )
+            self.requests[client_ip].append(now)
+        return await call_next(request)
+
+# Custom HTTP Security Headers Middleware
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        response = await call_next(request)
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        return response
+
+app.add_middleware(RateLimitMiddleware, limit=60, window=60)
+app.add_middleware(SecurityHeadersMiddleware)
+
+# Enable CORS for local development and production Firebase deployment
+allowed_origins = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "https://social-guard-7b275.web.app",
+    "https://social-guard-7b275.firebaseapp.com"
+]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -69,6 +116,33 @@ def predict_single_account(account: AccountInputSchema):
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Prediction error: {str(e)}")
+
+@app.post("/api/predict/profile-link")
+async def predict_profile_link(payload: Dict[str, str]):
+    """
+    Parses a social media profile link, extracts/generates features using ML
+    heuristics/scraping, and evaluates it through the SocialGuard pipeline.
+    """
+    url = payload.get("profile_url", "").strip()
+    if not url:
+        raise HTTPException(status_code=400, detail="Profile URL is required.")
+    
+    if pipeline is None or not pipeline.is_trained:
+        raise HTTPException(status_code=503, detail="SocialGuard pipeline is still initializing.")
+    
+    try:
+        extractor = ProfileFeatureExtractor()
+        extracted_data = await extractor.extract_features_from_url(url)
+        
+        result = pipeline.predict_account(extracted_data)
+        result["platform"] = extracted_data["platform"]
+        result["profile_url"] = url
+        result["extracted_username"] = extracted_data["username"]
+        result["raw_extracted_features"] = extracted_data
+        
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to analyze profile link: {str(e)}")
 
 @app.post("/api/predict/batch")
 def predict_batch_accounts(batch: BatchAccountInputSchema):
@@ -254,42 +328,30 @@ async def websocket_live_stream(websocket: WebSocket):
 def export_project_report(format: str = "markdown"):
     """
     Generates downloadable IEEE-structured final evaluation and summary report.
+    Reads and serves the comprehensive IEEE_SocialGuard_Paper.md from the docs directory.
     """
-    if pipeline is None or not pipeline.is_trained:
-        raise HTTPException(status_code=503, detail="Pipeline not ready.")
-    
-    benchmarks = pipeline.evaluation_metadata.get("benchmarks", {})
-    models_comp = benchmarks.get("models_comparison", [])
-    
-    markdown_report = f"""# SocialGuard Project Summary Report
-**Hybrid ML + NLP Framework for Detecting Fraudulent Social Media Accounts**
-
-## 1. Executive Summary
-- **Total Dataset Size**: {pipeline.evaluation_metadata.get('dataset_total_samples', 6000)} labeled records
-- **Class Distribution**: Genuine: {pipeline.evaluation_metadata.get('genuine_count')}, Fraudulent/Bot: {pipeline.evaluation_metadata.get('fraudulent_count')}
-- **Imbalance Handling**: SMOTE (Synthetic Minority Over-sampling Technique) applied to training split.
-- **Champion Model**: {pipeline.model_suite.best_model_name}
-
-## 2. Multi-Model Performance Benchmark
-| Model Architecture | Accuracy (%) | Precision (%) | Recall (%) | F1-Score (%) | ROC-AUC (%) |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-"""
-    for m in models_comp:
-        star = " 🏆" if m["is_best"] else ""
-        markdown_report += f"| {m['model_name']}{star} | {m['accuracy']}% | {m['precision']}% | {m['recall']}% | {m['f1_score']}% | {m['roc_auc']}% |\n"
-
-    markdown_report += """
-## 3. Anomaly & Coordinated Ring Detection
-- **Isolation Forest**: Identifies zero-day behavioral anomalies deviating from normal distributions.
-- **DBSCAN Clustering**: Clusters high-density synchronized accounts in 2D PCA feature space to identify follow-farms and bot nets.
-
-## 4. Explainability & Multi-Modal NLP Integration
-- Real-time TF-IDF spam trigger density scoring.
-- Circumvent-resistant ratio calculation ($f_{ratio} = \\frac{followers+1}{following+1}$).
-- Circadian active hours entropy analysis.
-"""
-
-    if format == "json":
-        return JSONResponse(content=pipeline.evaluation_metadata)
-    else:
+    try:
+        # Resolve absolute path to docs/IEEE_SocialGuard_Paper.md
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        paper_path = os.path.normpath(os.path.join(base_dir, "..", "..", "docs", "IEEE_SocialGuard_Paper.md"))
+        
+        if os.path.exists(paper_path):
+            with open(paper_path, "r", encoding="utf-8") as f:
+                content = f.read()
+            return PlainTextResponse(content=content, media_type="text/markdown")
+        else:
+            raise FileNotFoundError()
+    except Exception:
+        # Fallback dynamic basic report if file not found
+        benchmarks = pipeline.evaluation_metadata.get("benchmarks", {}) if pipeline else {}
+        models_comp = benchmarks.get("models_comparison", [])
+        
+        markdown_report = f"# SocialGuard Project Summary Report\n"
+        markdown_report += "**Hybrid ML + NLP Framework for Detecting Fraudulent Social Media Accounts**\n\n"
+        markdown_report += "## 1. Executive Summary\n"
+        markdown_report += f"- **Total Dataset Size**: {pipeline.evaluation_metadata.get('dataset_total_samples', 6000) if pipeline else 6000} samples\n"
+        markdown_report += "## 2. Model Performance Benchmarks\n"
+        for m in models_comp:
+            markdown_report += f"- {m['model_name']}: Accuracy {m['accuracy']}%, F1-Score {m['f1_score']}%\n"
+            
         return PlainTextResponse(content=markdown_report, media_type="text/markdown")

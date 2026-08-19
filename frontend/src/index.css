@@ -79,3 +79,76 @@ body {
     linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
     linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
 }
+
+/* Print Media Styles for IEEE double-column layout */
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-family: 'Times New Roman', Times, serif !important;
+    font-size: 9.5pt !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .print-container {
+    max-width: 100% !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+
+  .print-paper {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    color: #000000 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .print-black {
+    color: #000000 !important;
+  }
+
+  .print-border-black {
+    border-color: #000000 !important;
+  }
+
+  .print-bg-transparent {
+    background: transparent !important;
+  }
+
+  /* IEEE Dual Column Print */
+  .print-dual-column {
+    display: block !important;
+    column-count: 2 !important;
+    column-gap: 0.4in !important;
+    font-size: 8.5pt !important;
+    line-height: 1.35 !important;
+    text-align: justify !important;
+  }
+
+  /* Section Titles spacing */
+  h2, h3 {
+    page-break-after: avoid;
+    break-after: avoid;
+    margin-top: 10pt !important;
+    margin-bottom: 4pt !important;
+  }
+
+  p {
+    margin-bottom: 6pt !important;
+  }
+
+  /* Hide default scrollbars and elements */
+  ::-webkit-scrollbar {
+    display: none !important;
+  }
+}
+
