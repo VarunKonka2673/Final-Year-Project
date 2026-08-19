@@ -3,12 +3,12 @@ echo ======================================================================
 echo           SocialGuard — Deploy Frontend to Firebase Hosting
 echo ======================================================================
 echo.
-set /p RENDER_URL="Enter your Render backend URL (e.g. https://socialguard-backend.onrender.com): "
-if "%RENDER_URL%"=="" (
-    echo Error: Render backend URL is required.
-    pause
-    exit /b 1
-)
+set RENDER_URL=https://final-year-project-l7us.onrender.com
+set /p USER_URL="Enter your Render backend URL [Default: %RENDER_URL%]: "
+if not "%USER_URL%"=="" set RENDER_URL=%USER_URL%
+
+:: Strip trailing slash if present
+if "%RENDER_URL:~-1%"=="/" set RENDER_URL=%RENDER_URL:~0,-1%
 
 echo.
 echo Writing environment configuration...
