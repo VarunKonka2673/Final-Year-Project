@@ -192,7 +192,7 @@ The backend enforces strict security headers:
 - **Referrer-Policy** is locked to `strict-origin-when-cross-origin`.
 
 ### C. CORS Origin Validation
-CORS (Cross-Origin Resource Sharing) is restricted to development servers (`localhost`) and our verified frontend domains (`https://social-guard-7b275.web.app` and `https://social-guard-7b275.firebaseapp.com`), preventing external sites from executing unauthorized queries against the models.
+CORS (Cross-Origin Resource Sharing) is restricted to development servers (`localhost`) and our verified frontend domain (`https://social-guard-7b275.web.app`), preventing external sites from executing unauthorized queries against the models.
 
 ---
 

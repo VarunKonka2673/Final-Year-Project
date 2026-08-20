@@ -70,8 +70,7 @@ app.add_middleware(SecurityHeadersMiddleware)
 allowed_origins = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
-    "https://social-guard-7b275.web.app",
-    "https://social-guard-7b275.firebaseapp.com"
+    "https://social-guard-7b275.web.app"
 ]
 app.add_middleware(
     CORSMiddleware,
