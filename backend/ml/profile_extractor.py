@@ -464,7 +464,7 @@ class ProfileFeatureExtractor:
         # If it is a known real profile, seed its stats first
         username_lower = username.lower()
         if username_lower in REAL_PROFILES:
-            scraped_stats = {**REAL_PROFILES[username_lower], **scraped_stats}
+            scraped_stats = {**scraped_stats, **REAL_PROFILES[username_lower]}
 
         # Step 2: Extrapolate missing attributes via heuristics
         final_features = self.generate_features_by_heuristics(platform, username, scraped_stats)
