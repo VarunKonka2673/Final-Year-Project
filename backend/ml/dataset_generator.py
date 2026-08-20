@@ -83,7 +83,8 @@ GENUINE_ARCHETYPES = [
     "Genuine-Active-User",
     "Genuine-Casual-User",
     "Genuine-Creator-Influencer",
-    "Genuine-Professional"
+    "Genuine-Professional",
+    "Genuine-Celebrity"
 ]
 
 def generate_socialguard_dataset(num_samples: int = 6000, fake_ratio: float = 0.28) -> pd.DataFrame:
@@ -108,11 +109,19 @@ def generate_socialguard_dataset(num_samples: int = 6000, fake_ratio: float = 0.
         # Profile signals
         has_profile_pic = 1 if random.random() < 0.98 else 0
         account_age_days = int(np.random.gamma(shape=3.0, scale=400.0) + 60) # Avg ~1200 days (~3.5 years)
-        is_verified = 1 if (archetype == "Genuine-Creator-Influencer" and random.random() < 0.35) else (1 if random.random() < 0.04 else 0)
+        is_verified = 1 if (archetype in ["Genuine-Creator-Influencer", "Genuine-Celebrity"] and random.random() < 0.8) else (1 if random.random() < 0.04 else 0)
         has_url = 1 if random.random() < 0.45 else 0
         has_contact_info = 1 if random.random() < 0.60 else 0
         
-        if archetype == "Genuine-Creator-Influencer":
+        if archetype == "Genuine-Celebrity":
+            follower_count = int(np.random.uniform(1000000, 150000000))
+            following_count = int(np.random.uniform(50, 500))
+            posts_count = int(np.random.uniform(800, 10000))
+            posting_frequency_per_day = round(float(np.random.normal(2.0, 0.8)), 2)
+            avg_engagement_rate = round(float(np.random.uniform(0.5, 5.0)), 2)
+            avg_likes_per_post = round(follower_count * (avg_engagement_rate / 100.0) * random.uniform(0.7, 1.3), 1)
+            avg_retweets_or_shares = round(avg_likes_per_post * random.uniform(0.08, 0.25), 1)
+        elif archetype == "Genuine-Creator-Influencer":
             follower_count = int(np.random.exponential(scale=35000) + 8000)
             following_count = int(np.random.exponential(scale=600) + 150)
             posts_count = int(np.random.exponential(scale=450) + 100)

@@ -180,6 +180,7 @@ export default function SingleScanner() {
       setResult(data);
       if (data.raw_extracted_features) {
         setFormData(data.raw_extracted_features);
+        setScanMode('attributes');
       }
     } catch (err) {
       setError(err.message || 'Failed to scan profile link.');
@@ -316,7 +317,21 @@ export default function SingleScanner() {
               </div>
 
               {/* Profile & Handle */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-slate-300 mb-1">Platform</label>
+                  <select
+                    value={formData.platform || 'Instagram'}
+                    onChange={(e) => handleInputChange('platform', e.target.value)}
+                    className="w-full px-3 py-2 text-xs bg-slate-900/90 border border-slate-700 rounded-lg text-slate-100 focus:outline-none focus:border-cyan-400"
+                  >
+                    <option value="Instagram">Instagram</option>
+                    <option value="LinkedIn">LinkedIn</option>
+                    <option value="Twitter">X / Twitter</option>
+                    <option value="TikTok">TikTok</option>
+                    <option value="Generic">Generic Web</option>
+                  </select>
+                </div>
                 <div>
                   <label className="block text-xs font-medium text-slate-300 mb-1">Username Handle</label>
                   <input
@@ -329,16 +344,34 @@ export default function SingleScanner() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1">Display Name</label>
+                  <label className="block text-xs font-medium text-slate-300 mb-1">
+                    {formData.platform === 'Twitter' ? 'Display Name' : 'Full Name'}
+                  </label>
                   <input
                     type="text"
-                    value={formData.full_name || ''}
-                    onChange={(e) => handleInputChange('full_name', e.target.value)}
+                    value={formData.full_name || formData.display_name || ''}
+                    onChange={(e) => {
+                      handleInputChange('full_name', e.target.value);
+                      handleInputChange('display_name', e.target.value);
+                    }}
                     className="w-full px-3 py-2 text-xs bg-slate-900/90 border border-slate-700 rounded-lg text-slate-100 focus:outline-none focus:border-cyan-400"
                     placeholder="e.g. John Doe"
                   />
                 </div>
               </div>
+
+              {formData.platform === 'LinkedIn' && (
+                <div>
+                  <label className="block text-xs font-medium text-slate-300 mb-1">Headline</label>
+                  <input
+                    type="text"
+                    value={formData.headline || ''}
+                    onChange={(e) => handleInputChange('headline', e.target.value)}
+                    className="w-full px-3 py-2 text-xs bg-slate-900/90 border border-slate-700 rounded-lg text-slate-100 focus:outline-none focus:border-cyan-400"
+                    placeholder="e.g. Senior Software Engineer at Google"
+                  />
+                </div>
+              )}
 
               {/* Bio Text (NLP Target) */}
               <div>
@@ -377,7 +410,10 @@ export default function SingleScanner() {
                   <input
                     type="number"
                     value={formData.follower_count}
-                    onChange={(e) => handleInputChange('follower_count', parseFloat(e.target.value) || 0)}
+                    onChange={(e) => {
+                      handleInputChange('follower_count', parseFloat(e.target.value) || 0);
+                      handleInputChange('followers', parseFloat(e.target.value) || 0);
+                    }}
                     className="w-full px-2.5 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-lg text-slate-100 font-mono"
                   />
                 </div>
@@ -386,19 +422,91 @@ export default function SingleScanner() {
                   <input
                     type="number"
                     value={formData.following_count}
-                    onChange={(e) => handleInputChange('following_count', parseFloat(e.target.value) || 1)}
+                    onChange={(e) => {
+                      handleInputChange('following_count', parseFloat(e.target.value) || 1);
+                      handleInputChange('following', parseFloat(e.target.value) || 1);
+                    }}
                     className="w-full px-2.5 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-lg text-slate-100 font-mono"
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] text-slate-400 mb-1">Age (Days)</label>
+                  {formData.platform === 'LinkedIn' ? (
+                    <div>
+                      <label className="block text-[11px] text-slate-400 mb-1">Connections</label>
+                      <input
+                        type="number"
+                        value={formData.connections || 0}
+                        onChange={(e) => handleInputChange('connections', parseFloat(e.target.value) || 0)}
+                        className="w-full px-2.5 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-lg text-slate-100 font-mono"
+                      />
+                    </div>
+                  ) : formData.platform === 'TikTok' ? (
+                    <div>
+                      <label className="block text-[11px] text-slate-400 mb-1">Likes Count</label>
+                      <input
+                        type="number"
+                        value={formData.likes_count || 0}
+                        onChange={(e) => handleInputChange('likes_count', parseFloat(e.target.value) || 0)}
+                        className="w-full px-2.5 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-lg text-slate-100 font-mono"
+                      />
+                    </div>
+                  ) : (
+                    <div>
+                      <label className="block text-[11px] text-slate-400 mb-1">Age (Days)</label>
+                      <input
+                        type="number"
+                        value={formData.account_age_days || 1}
+                        onChange={(e) => handleInputChange('account_age_days', parseFloat(e.target.value) || 1)}
+                        className="w-full px-2.5 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-lg text-slate-100 font-mono"
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Dynamic Posts/Tweets/Videos Count */}
+              <div className="grid grid-cols-3 gap-3 pt-2">
+                <div>
+                  <label className="block text-[11px] text-slate-400 mb-1">
+                    {formData.platform === 'LinkedIn' ? 'Posts' : 
+                     formData.platform === 'Twitter' ? 'Tweets' :
+                     formData.platform === 'TikTok' ? 'Videos' : 'Media Count'}
+                  </label>
                   <input
                     type="number"
-                    value={formData.account_age_days}
-                    onChange={(e) => handleInputChange('account_age_days', parseFloat(e.target.value) || 1)}
+                    value={formData.media_count || formData.video_count || formData.tweet_count || formData.posts_count || 0}
+                    onChange={(e) => {
+                      const val = parseFloat(e.target.value) || 0;
+                      handleInputChange('posts_count', val);
+                      handleInputChange('media_count', val);
+                      handleInputChange('video_count', val);
+                      handleInputChange('tweet_count', val);
+                    }}
                     className="w-full px-2.5 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-lg text-slate-100 font-mono"
                   />
                 </div>
+                {formData.platform === 'LinkedIn' && (
+                  <>
+                    <div>
+                      <label className="block text-[11px] text-slate-400 mb-1">Experience</label>
+                      <input
+                        type="number"
+                        value={formData.experience_count || 0}
+                        onChange={(e) => handleInputChange('experience_count', parseInt(e.target.value) || 0)}
+                        className="w-full px-2.5 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-lg text-slate-100 font-mono"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] text-slate-400 mb-1">Education</label>
+                      <input
+                        type="number"
+                        value={formData.education_count || 0}
+                        onChange={(e) => handleInputChange('education_count', parseInt(e.target.value) || 0)}
+                        className="w-full px-2.5 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-lg text-slate-100 font-mono"
+                      />
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* Behavioural Metrics */}
@@ -426,7 +534,7 @@ export default function SingleScanner() {
               </div>
 
               {/* Checkbox Toggles */}
-              <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-800/80">
+              <div className="grid grid-cols-4 gap-2 pt-2 border-t border-slate-800/80">
                 <label className="flex items-center space-x-2 text-xs text-slate-300 cursor-pointer">
                   <input
                     type="checkbox"
@@ -454,6 +562,27 @@ export default function SingleScanner() {
                   />
                   <span>Bio Link URL</span>
                 </label>
+                {formData.platform === 'LinkedIn' ? (
+                  <label className="flex items-center space-x-2 text-xs text-slate-300 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData.is_premium === 1}
+                      onChange={(e) => handleInputChange('is_premium', e.target.checked ? 1 : 0)}
+                      className="rounded border-slate-700 text-cyan-500 focus:ring-0 bg-slate-900"
+                    />
+                    <span>Is Premium</span>
+                  </label>
+                ) : (
+                  <label className="flex items-center space-x-2 text-xs text-slate-300 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData.is_private === 1}
+                      onChange={(e) => handleInputChange('is_private', e.target.checked ? 1 : 0)}
+                      className="rounded border-slate-700 text-cyan-500 focus:ring-0 bg-slate-900"
+                    />
+                    <span>Is Private</span>
+                  </label>
+                )}
               </div>
 
               {/* Scan Button */}

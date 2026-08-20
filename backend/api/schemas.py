@@ -28,6 +28,24 @@ class AccountInputSchema(BaseModel):
     hashtag_count_avg: Optional[float] = Field(1.5, ge=0)
     url_in_post_ratio: Optional[float] = Field(0.1, ge=0, le=1.0)
     active_hours_entropy: Optional[float] = Field(3.0, ge=0, le=5.0)
+    
+    # Platform-specific features
+    platform: Optional[str] = Field("Generic Web", description="Platform name")
+    followers: Optional[float] = Field(None, description="Alias for follower_count")
+    following: Optional[float] = Field(None, description="Alias for following_count")
+    media_count: Optional[float] = Field(None)
+    connections: Optional[float] = Field(None)
+    likes_count: Optional[float] = Field(None)
+    video_count: Optional[float] = Field(None)
+    tweet_count: Optional[float] = Field(None)
+    is_premium: Optional[int] = Field(None)
+    experience_count: Optional[int] = Field(None)
+    education_count: Optional[int] = Field(None)
+    skills_count: Optional[int] = Field(None)
+    is_private: Optional[int] = Field(None)
+    profile_pic: Optional[str] = Field(None)
+    headline: Optional[str] = Field(None)
+    display_name: Optional[str] = Field(None)
 
 class BatchAccountInputSchema(BaseModel):
     accounts: List[AccountInputSchema]

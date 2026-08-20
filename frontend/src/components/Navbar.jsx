@@ -13,7 +13,7 @@ import {
 
 export default function Navbar({ activeTab, setActiveTab, apiStatus }) {
   const navItems = [
-    { id: 'scanner', label: 'Live Inspector', icon: ShieldCheck, tag: 'Core' },
+    { id: 'scanner', label: 'Predict / Inspector', icon: ShieldCheck, tag: 'Core' },
     { id: 'arena', label: 'Model Arena', icon: BarChart3, tag: '6 Models' },
     { id: 'clusters', label: 'Bot Rings & Clusters', icon: Network, tag: 'DBSCAN' },
     { id: 'batch', label: 'Batch CSV Audit', icon: FileSpreadsheet, tag: 'Bulk' },
