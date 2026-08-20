@@ -7,8 +7,11 @@ WORKDIR /app
 # Copy requirements
 COPY requirements.txt .
 
-# Install dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+# Upgrade pip, setuptools, and wheel to ensure correct binary wheel compatibility
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel
+
+# Install dependencies strictly using precompiled binary wheels to prevent OOM/compilation timeouts
+RUN pip install --no-cache-dir --only-binary :all: -r requirements.txt
 
 # Copy codebase
 COPY backend /app/backend
