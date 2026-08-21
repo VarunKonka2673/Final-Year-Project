@@ -179,13 +179,18 @@ class ProfileFeatureExtractor:
         """
         scraped_data = {}
         try:
+            # Configure unverified SSL context to bypass certificate issues under proxies
+            import ssl
+            context = ssl._create_unverified_context()
+            https_handler = urllib.request.HTTPSHandler(context=context)
+
             # Configure proxy if PROXY_URL is set in environment variables
             proxy_url = os.environ.get("PROXY_URL")
             if proxy_url:
                 proxy_handler = urllib.request.ProxyHandler({'http': proxy_url, 'https': proxy_url})
-                opener = urllib.request.build_opener(proxy_handler)
+                opener = urllib.request.build_opener(proxy_handler, https_handler)
             else:
-                opener = urllib.request.build_opener()
+                opener = urllib.request.build_opener(https_handler)
 
             req = urllib.request.Request(
                 url,
@@ -272,8 +277,9 @@ class ProfileFeatureExtractor:
                 img_content = self._extract_meta(html_raw, "og:image")
                 if img_content:
                     scraped_data["profile_pic"] = html.unescape(img_content).replace("&amp;", "&")
-        except Exception:
+        except Exception as e:
             # Silence scraping exceptions; fallback handles everything
+            print(f"[Scraper Error] Failed to scrape {url} on {platform}: {str(e)}")
             pass
         return scraped_data
 
