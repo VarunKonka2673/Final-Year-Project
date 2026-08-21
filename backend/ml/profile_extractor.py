@@ -300,96 +300,32 @@ class ProfileFeatureExtractor:
         elif has_spam_token or (n_digits >= 5 and random.random() < 0.8):
             is_bot = True
             archetype = "Crypto-Phishing-Bot" if "crypto" in username_lower or "wallet" in username_lower else "Spam-Promoter-Bot"
+            archetype = "Bot"
         elif n_digits >= 4 or (u_len > 12 and random.random() < 0.6):
             is_bot = True
-            archetype = "Follower-Farm-Bot" if random.random() < 0.5 else "Automated-Content-Scraper"
+            archetype = "Bot"
         else:
             is_bot = False
-            archetype = "Genuine-Casual-User"
+            archetype = "Casual"
 
-        # 3. Assemble base and platform-specific features
+        # 3. Assemble features (only using scraped values or clean defaults)
         features = {
             "username": username,
             "platform": platform,
-            "profile_pic": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150",
-            "is_verified": 1 if archetype in ("Genuine-Celebrity", "Genuine-Creator-Influencer") else (1 if random.random() < 0.05 else 0),
-            "is_private": 0 if archetype == "Genuine-Celebrity" else (1 if random.random() < 0.4 else 0)
+            "profile_pic": scraped_stats.get("profile_pic", ""),
+            "is_verified": scraped_stats.get("is_verified", 0),
+            "is_private": scraped_stats.get("is_private", 0),
+            "followers": scraped_stats.get("follower_count", 0),
+            "following": scraped_stats.get("following_count", 0),
+            "posts_count": scraped_stats.get("posts_count", 0),
+            "account_age_days": scraped_stats.get("account_age_days", 0.0),
+            "bio": scraped_stats.get("bio", ""),
+            "recent_post": scraped_stats.get("recent_post", ""),
+            "posting_frequency_per_day": 0.0,
+            "avg_engagement_rate": 0.0,
+            "avg_likes_per_post": 0.0,
+            "avg_retweets_or_shares": 0.0
         }
-
-        # Apply specific counts/text depending on archetype
-        if archetype == "Genuine-Celebrity":
-            features["followers"] = scraped_stats.get("follower_count", int(random.uniform(5000000, 150000000)))
-            features["following"] = scraped_stats.get("following_count", int(random.uniform(50, 500)))
-            features["posts_count"] = scraped_stats.get("posts_count", int(random.uniform(800, 8000)))
-            features["account_age_days"] = round(random.uniform(1000, 4500), 1)
-            features["bio"] = f"Official account for {username.title()}. Stay updated with our latest updates and projects."
-            features["recent_post"] = "Thrilled to share our latest milestone with the community! Thank you all for the support."
-            features["posting_frequency_per_day"] = round(random.uniform(0.5, 3.0), 2)
-            features["avg_engagement_rate"] = round(random.uniform(1.5, 6.0), 2)
-            features["avg_likes_per_post"] = round(features["followers"] * (features["avg_engagement_rate"] / 100.0), 1)
-            features["avg_retweets_or_shares"] = round(features["avg_likes_per_post"] * 0.1, 1)
-        elif archetype == "Genuine-Creator-Influencer":
-            features["followers"] = scraped_stats.get("follower_count", int(random.uniform(10000, 500000)))
-            features["following"] = scraped_stats.get("following_count", int(random.uniform(200, 1200)))
-            features["posts_count"] = scraped_stats.get("posts_count", int(random.uniform(200, 1500)))
-            features["account_age_days"] = round(random.uniform(400, 2000), 1)
-            features["bio"] = "Creator & explorer 🎨 | Building cool systems and sharing design ideas. DM for collabs!"
-            features["recent_post"] = "Just dropped a new design breakdown of interactive landing pages. Let me know what you think!"
-            features["posting_frequency_per_day"] = round(random.uniform(0.3, 1.8), 2)
-            features["avg_engagement_rate"] = round(random.uniform(3.0, 9.0), 2)
-            features["avg_likes_per_post"] = round(features["followers"] * (features["avg_engagement_rate"] / 100.0), 1)
-            features["avg_retweets_or_shares"] = round(features["avg_likes_per_post"] * 0.05, 1)
-        elif is_bot:
-            # Bot values
-            features["is_verified"] = 0
-            features["is_private"] = 0
-            features["followers"] = scraped_stats.get("follower_count", int(random.uniform(5, 300)))
-            features["following"] = scraped_stats.get("following_count", int(random.uniform(2000, 7500)))
-            features["posts_count"] = scraped_stats.get("posts_count", int(random.uniform(2, 50)))
-            features["account_age_days"] = round(random.uniform(1.0, 30.0), 1)
-            features["posting_frequency_per_day"] = round(random.uniform(12.0, 75.0), 2)
-            features["avg_engagement_rate"] = round(random.uniform(0.01, 0.15), 2)
-            features["avg_likes_per_post"] = round(random.uniform(0.1, 4.0), 1)
-            features["avg_retweets_or_shares"] = round(random.uniform(0.0, 1.0), 1)
-            
-            if archetype == "Crypto-Phishing-Bot":
-                features["bio"] = f"🔥 OFFICIAL REWARDS! Claim your {random.choice(['$5k', '0.4 ETH'])} bonus instantly! Visit the link in bio to verify wallet ⚡"
-                features["recent_post"] = "🚨 REWARDS AIRDROP LIVE! Retweet and connect your wallet at the secure link now to receive your distribution! #Airdrop #ETH"
-            else:
-                features["bio"] = "Get 10k real followers instantly! Best prices and fast organic growth. DM us now 🔥"
-                features["recent_post"] = "Boost your social score within 24 hours! DM for paid promotions package."
-        else:
-            # Casual user
-            features["followers"] = scraped_stats.get("follower_count", int(random.uniform(50, 900)))
-            features["following"] = scraped_stats.get("following_count", int(random.uniform(80, 800)))
-            features["posts_count"] = scraped_stats.get("posts_count", int(random.uniform(10, 400)))
-            features["account_age_days"] = round(random.uniform(100, 1500), 1)
-            features["bio"] = "Life explorer, coffee enthusiast ☕, book lover. Just sharing simple moments."
-            features["recent_post"] = "A lovely morning walk in the park. The trees are starting to change colors 🍂"
-            features["posting_frequency_per_day"] = round(random.uniform(0.05, 0.5), 2)
-            features["avg_engagement_rate"] = round(random.uniform(4.0, 15.0), 2)
-            features["avg_likes_per_post"] = round(features["followers"] * (features["avg_engagement_rate"] / 100.0), 1)
-            features["avg_retweets_or_shares"] = round(random.uniform(0.1, 3.0), 1)
-
-        # Standardise name
-        features["full_name"] = scraped_stats.get("full_name", username.replace("_", " ").title())
-        features["display_name"] = features["full_name"]
-
-        # Platform specific metric mappings & extra attributes
-        if platform == "LinkedIn":
-            features["connections"] = scraped_stats.get("connections", int(features["following"] * random.uniform(0.8, 2.5)))
-            features["headline"] = scraped_stats.get("headline", f"Professional Account at {username.title()}" if not is_bot else "Crypto Consultant & Wealth Manager")
-            features["is_premium"] = 1 if (not is_bot and random.random() < 0.3) else 0
-            features["experience_count"] = int(random.uniform(2, 7)) if not is_bot else 1
-            features["education_count"] = int(random.uniform(1, 3)) if not is_bot else 0
-            features["skills_count"] = int(random.uniform(5, 30)) if not is_bot else 2
-        elif platform == "TikTok":
-            features["likes_count"] = scraped_stats.get("likes_count", int(features["followers"] * random.uniform(3.0, 25.0)))
-            features["video_count"] = features["posts_count"]
-        elif platform == "X / Twitter":
-            features["tweet_count"] = features["posts_count"]
-        else:
-            features["media_count"] = features["posts_count"]
 
         # Apply scraped overrides if they exist
         if "follower_count" in scraped_stats:
@@ -424,17 +360,35 @@ class ProfileFeatureExtractor:
         if "is_private" in scraped_stats:
             features["is_private"] = scraped_stats["is_private"]
 
+        # Standardise name
+        features["full_name"] = scraped_stats.get("full_name", username.replace("_", " ").title())
+        features["display_name"] = features["full_name"]
+
+        # Platform specific metric mappings & extra attributes
+        if platform == "LinkedIn":
+            features["connections"] = scraped_stats.get("connections", 0)
+            features["headline"] = scraped_stats.get("headline", "")
+            features["is_premium"] = scraped_stats.get("is_premium", 0)
+            features["experience_count"] = scraped_stats.get("experience_count", 0)
+            features["education_count"] = scraped_stats.get("education_count", 0)
+            features["skills_count"] = scraped_stats.get("skills_count", 0)
+        elif platform == "TikTok":
+            features["likes_count"] = scraped_stats.get("likes_count", 0)
+            features["video_count"] = features["posts_count"]
+        elif platform == "X / Twitter":
+            features["tweet_count"] = features["posts_count"]
+        else:
+            features["media_count"] = features["posts_count"]
+
         # Recalculate posting frequency and engagement metrics based on real values
-        if "posts_count" in scraped_stats:
+        if features["posts_count"] > 0 and features["account_age_days"] > 0:
             features["posting_frequency_per_day"] = round(features["posts_count"] / features["account_age_days"], 2)
-            # Clip to prevent extreme anomalies
             features["posting_frequency_per_day"] = max(0.01, min(100.0, features["posting_frequency_per_day"]))
             
-        if "follower_count" in scraped_stats:
-            # Re-estimate engagement parameters
-            er = round(random.uniform(1.5, 6.0), 2) if features["follower_count"] > 100000 else round(random.uniform(3.0, 12.0), 2)
+        if features["followers"] > 0:
+            er = round(random.uniform(1.5, 6.0), 2) if features["followers"] > 100000 else round(random.uniform(3.0, 12.0), 2)
             features["avg_engagement_rate"] = er
-            features["avg_likes_per_post"] = round(features["follower_count"] * (er / 100.0), 1)
+            features["avg_likes_per_post"] = round(features["followers"] * (er / 100.0), 1)
             features["avg_retweets_or_shares"] = round(features["avg_likes_per_post"] * 0.1, 1)
 
         # Backwards compatible mapping to the 40 base features expected by ML pipeline
@@ -444,15 +398,15 @@ class ProfileFeatureExtractor:
         features["has_url"] = 1 if ("http" in features["bio"] or "bit.ly" in features["bio"]) else 0
         features["has_contact_info"] = 1 if ("contact" in features["bio"] or "hello" in features["bio"] or "@" in features["bio"]) else 0
         features["like_to_share_ratio"] = round(features["avg_likes_per_post"] / (features["avg_retweets_or_shares"] + 0.1), 2)
-        features["mention_count_avg"] = round(random.uniform(3.5, 9.5), 2) if is_bot else round(random.uniform(0.1, 1.2), 2)
-        features["hashtag_count_avg"] = round(random.uniform(4.5, 12.0), 2) if is_bot else round(random.uniform(0.2, 2.5), 2)
-        features["url_in_post_ratio"] = round(random.uniform(0.6, 0.98), 2) if is_bot else round(random.uniform(0.01, 0.15), 2)
-        features["active_hours_entropy"] = round(random.uniform(0.2, 1.2), 2) if is_bot else round(random.uniform(2.6, 3.8), 2)
-        features["spam_keyword_score"] = round(random.uniform(0.55, 0.98), 2) if is_bot else round(random.uniform(0.0, 0.12), 2)
-        features["sentiment_polarity"] = round(random.uniform(0.45, 0.95), 2) if is_bot else round(random.uniform(-0.1, 0.75), 2)
-        features["lexical_diversity"] = round(random.uniform(0.25, 0.55), 2) if is_bot else round(random.uniform(0.70, 0.95), 2)
-        features["repeated_text_ratio"] = round(random.uniform(0.50, 0.95), 2) if is_bot else round(random.uniform(0.0, 0.15), 2)
-        features["uppercase_ratio"] = round(random.uniform(0.25, 0.75), 2) if is_bot else round(random.uniform(0.02, 0.12), 2)
+        features["mention_count_avg"] = 0.0
+        features["hashtag_count_avg"] = 0.0
+        features["url_in_post_ratio"] = 0.0
+        features["active_hours_entropy"] = 0.0
+        features["spam_keyword_score"] = 0.0
+        features["sentiment_polarity"] = 0.0
+        features["lexical_diversity"] = 0.0
+        features["repeated_text_ratio"] = 0.0
+        features["uppercase_ratio"] = 0.0
 
         return features
 
