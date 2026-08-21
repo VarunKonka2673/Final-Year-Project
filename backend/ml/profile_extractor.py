@@ -410,6 +410,8 @@ class ProfileFeatureExtractor:
                 features["media_count"] = scraped_stats["posts_count"]
         if "bio" in scraped_stats:
             features["bio"] = scraped_stats["bio"]
+        if "recent_post" in scraped_stats:
+            features["recent_post"] = scraped_stats["recent_post"]
         if "full_name" in scraped_stats:
             features["full_name"] = scraped_stats["full_name"]
             features["display_name"] = scraped_stats["full_name"]
@@ -417,6 +419,10 @@ class ProfileFeatureExtractor:
             features["profile_pic"] = scraped_stats["profile_pic"]
         if "connections" in scraped_stats:
             features["connections"] = scraped_stats["connections"]
+        if "is_verified" in scraped_stats:
+            features["is_verified"] = scraped_stats["is_verified"]
+        if "is_private" in scraped_stats:
+            features["is_private"] = scraped_stats["is_private"]
 
         # Recalculate posting frequency and engagement metrics based on real values
         if "posts_count" in scraped_stats:

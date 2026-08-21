@@ -21,6 +21,7 @@ const PRESETS = {
     name: "Crypto Phishing Bot",
     badge: "Bot Archetype",
     data: {
+      platform: "X / Twitter",
       username: "binance_rewards_official_99",
       full_name: "Binance Airdrop Support",
       bio: "🔥 OFFICIAL $5,000 AIRDROP! Claim your token allocation now! Click link 👇 bit.ly/claim-crypto-now",
@@ -47,6 +48,7 @@ const PRESETS = {
     name: "Follower Farm Bot",
     badge: "Bot Archetype",
     data: {
+      platform: "Instagram",
       username: "user_8912409",
       full_name: "User 89124",
       bio: "Follow for follow back 100%! Instant follow back within seconds 🔥",
@@ -73,6 +75,7 @@ const PRESETS = {
     name: "Genuine Creator / Influencer",
     badge: "Organic Profile",
     data: {
+      platform: "LinkedIn",
       username: "elena_design_studio",
       full_name: "Elena Rostova",
       bio: "Lead Product Designer @FinTech 🎨 | UI/UX & Design Systems | Speaker & Mentor | elenarostova.design",
@@ -99,6 +102,7 @@ const PRESETS = {
     name: "Genuine Casual User",
     badge: "Organic Profile",
     data: {
+      platform: "Instagram",
       username: "alex_miller_24",
       full_name: "Alex Miller",
       bio: "Software developer, marathon runner, coffee addict ☕ Seattle, WA.",
@@ -327,9 +331,9 @@ export default function SingleScanner() {
                   >
                     <option value="Instagram">Instagram</option>
                     <option value="LinkedIn">LinkedIn</option>
-                    <option value="Twitter">X / Twitter</option>
+                    <option value="X / Twitter">X / Twitter</option>
                     <option value="TikTok">TikTok</option>
-                    <option value="Generic">Generic Web</option>
+                    <option value="Generic Web">Generic Web</option>
                   </select>
                 </div>
                 <div>
@@ -345,7 +349,7 @@ export default function SingleScanner() {
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-slate-300 mb-1">
-                    {formData.platform === 'Twitter' ? 'Display Name' : 'Full Name'}
+                    {formData.platform === 'X / Twitter' ? 'Display Name' : 'Full Name'}
                   </label>
                   <input
                     type="text"
@@ -469,7 +473,7 @@ export default function SingleScanner() {
                 <div>
                   <label className="block text-[11px] text-slate-400 mb-1">
                     {formData.platform === 'LinkedIn' ? 'Posts' : 
-                     formData.platform === 'Twitter' ? 'Tweets' :
+                     formData.platform === 'X / Twitter' ? 'Tweets' :
                      formData.platform === 'TikTok' ? 'Videos' : 'Media Count'}
                   </label>
                   <input
