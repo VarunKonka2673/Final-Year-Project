@@ -5,6 +5,7 @@ Attempts public HTML metadata scraping with a robust fallback to intelligent
 linguistic heuristics based on platform, username patterns, and keywords.
 """
 
+import os
 import re
 import html
 import random
@@ -178,12 +179,20 @@ class ProfileFeatureExtractor:
         """
         scraped_data = {}
         try:
+            # Configure proxy if PROXY_URL is set in environment variables
+            proxy_url = os.environ.get("PROXY_URL")
+            if proxy_url:
+                proxy_handler = urllib.request.ProxyHandler({'http': proxy_url, 'https': proxy_url})
+                opener = urllib.request.build_opener(proxy_handler)
+            else:
+                opener = urllib.request.build_opener()
+
             req = urllib.request.Request(
                 url,
                 headers={"User-Agent": self.user_agent}
             )
-            # Timeout in 3 seconds so API stays fast and responsive
-            with urllib.request.urlopen(req, timeout=3.0) as response:
+            # Fetch HTML content via opener with a slight timeout buffer for proxy latency
+            with opener.open(req, timeout=5.0) as response:
                 html_raw = response.read().decode("utf-8", errors="ignore")
                 
                 # Check for standard patterns in HTML (e.g. Meta descriptions, Titles)
