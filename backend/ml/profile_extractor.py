@@ -189,14 +189,20 @@ class ProfileFeatureExtractor:
             if scrapingbee_key:
                 from urllib.parse import quote_plus
                 # Route through ScrapingBee REST API
-                api_url = f"https://app.scrapingbee.com/api/v1/?api_key={scrapingbee_key}&url={quote_plus(url)}&render_js=false"
+                # Added forward_headers=true to forward custom headers to the target site
+                api_url = f"https://app.scrapingbee.com/api/v1/?api_key={scrapingbee_key}&url={quote_plus(url)}&render_js=false&forward_headers=true"
                 # Instagram, Twitter, and LinkedIn have strict bot detection; use premium proxies
                 if platform in ("Instagram", "X / Twitter", "LinkedIn"):
                     api_url += "&premium_proxy=true"
                 
                 req = urllib.request.Request(
                     api_url,
-                    headers={"User-Agent": self.user_agent}
+                    # Prefix custom headers with Spb- so ScrapingBee forwards them to the target site.
+                    # Force Accept-Language to English so counts (Followers, Following) are parsed correctly.
+                    headers={
+                        "Spb-User-Agent": self.user_agent,
+                        "Spb-Accept-Language": "en-US,en;q=0.9"
+                    }
                 )
                 opener = urllib.request.build_opener(https_handler)
             else:
