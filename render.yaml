@@ -4,4 +4,10 @@ services:
     env: docker
     healthCheckPath: /
     autoDeploy: true
+    envVars:
+      - key: SCRAPINGBEE_API_KEY
+        sync: false
+      - key: PROXY_URL
+        sync: false
+
 

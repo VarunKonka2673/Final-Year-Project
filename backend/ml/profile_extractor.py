@@ -184,20 +184,38 @@ class ProfileFeatureExtractor:
             context = ssl._create_unverified_context()
             https_handler = urllib.request.HTTPSHandler(context=context)
 
-            # Configure proxy if PROXY_URL is set in environment variables
-            proxy_url = os.environ.get("PROXY_URL")
-            if proxy_url:
-                proxy_handler = urllib.request.ProxyHandler({'http': proxy_url, 'https': proxy_url})
-                opener = urllib.request.build_opener(proxy_handler, https_handler)
-            else:
+            # Check if ScrapingBee/ScraperBee API key is set in environment
+            scrapingbee_key = os.environ.get("SCRAPINGBEE_API_KEY") or os.environ.get("SCRAPERBEE_API_KEY")
+            if scrapingbee_key:
+                from urllib.parse import quote_plus
+                # Route through ScrapingBee REST API
+                api_url = f"https://app.scrapingbee.com/api/v1/?api_key={scrapingbee_key}&url={quote_plus(url)}&render_js=false"
+                # Instagram, Twitter, and LinkedIn have strict bot detection; use premium proxies
+                if platform in ("Instagram", "X / Twitter", "LinkedIn"):
+                    api_url += "&premium_proxy=true"
+                
+                req = urllib.request.Request(
+                    api_url,
+                    headers={"User-Agent": self.user_agent}
+                )
                 opener = urllib.request.build_opener(https_handler)
+            else:
+                # Configure proxy if PROXY_URL is set in environment variables
+                proxy_url = os.environ.get("PROXY_URL")
+                if proxy_url:
+                    proxy_handler = urllib.request.ProxyHandler({'http': proxy_url, 'https': proxy_url})
+                    opener = urllib.request.build_opener(proxy_handler, https_handler)
+                else:
+                    opener = urllib.request.build_opener(https_handler)
 
-            req = urllib.request.Request(
-                url,
-                headers={"User-Agent": self.user_agent}
-            )
-            # Fetch HTML content via opener with a slight timeout buffer for proxy latency
-            with opener.open(req, timeout=5.0) as response:
+                req = urllib.request.Request(
+                    url,
+                    headers={"User-Agent": self.user_agent}
+                )
+
+            # Fetch HTML content via opener with a slight timeout buffer for proxy/API latency
+            timeout_val = 12.0 if scrapingbee_key else 5.0
+            with opener.open(req, timeout=timeout_val) as response:
                 html_raw = response.read().decode("utf-8", errors="ignore")
                 
                 # Check for standard patterns in HTML (e.g. Meta descriptions, Titles)
