@@ -391,6 +391,26 @@ class ProfileFeatureExtractor:
             is_bot = False
             archetype = "Casual"
 
+        # Upgrade archetype if we have scraped stats indicating celebrity or creator status
+        scraped_followers = scraped_stats.get("follower_count", 0)
+        scraped_verified = scraped_stats.get("is_verified", 0)
+        if scraped_followers > 100000 or scraped_verified == 1:
+            archetype = "Genuine-Celebrity"
+            is_bot = False
+        elif scraped_followers > 10000:
+            archetype = "Genuine-Creator-Influencer"
+            is_bot = False
+
+        # Estimate a realistic account age based on the detected profile archetype
+        if archetype == "Genuine-Celebrity":
+            fallback_age = round(random.uniform(1000, 4500), 1)
+        elif archetype == "Genuine-Creator-Influencer":
+            fallback_age = round(random.uniform(400, 2000), 1)
+        elif archetype in ("Bot", "Crypto-Phishing-Bot"):
+            fallback_age = round(random.uniform(1.0, 30.0), 1)
+        else:
+            fallback_age = round(random.uniform(100, 1500), 1)
+
         # Check if we successfully scraped this profile
         is_scraped = "follower_count" in scraped_stats
 
@@ -405,7 +425,7 @@ class ProfileFeatureExtractor:
                 "followers": scraped_stats.get("follower_count", 0),
                 "following": scraped_stats.get("following_count", 0),
                 "posts_count": scraped_stats.get("posts_count", 0),
-                "account_age_days": scraped_stats.get("account_age_days", 0.0),
+                "account_age_days": scraped_stats.get("account_age_days", fallback_age),
                 "bio": scraped_stats.get("bio", ""),
                 "recent_post": scraped_stats.get("recent_post", ""),
                 "posting_frequency_per_day": 0.0,
@@ -427,7 +447,7 @@ class ProfileFeatureExtractor:
                 features["followers"] = int(random.uniform(5000000, 150000000))
                 features["following"] = int(random.uniform(50, 500))
                 features["posts_count"] = int(random.uniform(800, 8000))
-                features["account_age_days"] = round(random.uniform(1000, 4500), 1)
+                features["account_age_days"] = fallback_age
                 features["bio"] = f"Official account for {username.title()}. Stay updated with our latest updates."
                 features["recent_post"] = "Thrilled to share our latest milestone with the community! Thank you all."
                 features["is_verified"] = 1
@@ -437,7 +457,7 @@ class ProfileFeatureExtractor:
                 features["followers"] = int(random.uniform(10000, 500000))
                 features["following"] = int(random.uniform(200, 1200))
                 features["posts_count"] = int(random.uniform(200, 1500))
-                features["account_age_days"] = round(random.uniform(400, 2000), 1)
+                features["account_age_days"] = fallback_age
                 features["bio"] = "Creator & explorer 🎨 | Building cool systems and sharing ideas. DM for collabs!"
                 features["recent_post"] = "Just dropped a new design breakdown of interactive landing pages."
                 features["is_verified"] = 1
@@ -447,7 +467,7 @@ class ProfileFeatureExtractor:
                 features["followers"] = int(random.uniform(5, 300))
                 features["following"] = int(random.uniform(2000, 7500))
                 features["posts_count"] = int(random.uniform(2, 50))
-                features["account_age_days"] = round(random.uniform(1.0, 30.0), 1)
+                features["account_age_days"] = fallback_age
                 features["bio"] = "Get 10k real followers instantly! Best prices and fast organic growth. DM us now 🔥"
                 features["recent_post"] = "Boost your social score within 24 hours! DM for paid promotions package."
                 features["is_verified"] = 0
@@ -457,7 +477,7 @@ class ProfileFeatureExtractor:
                 features["followers"] = int(random.uniform(50, 900))
                 features["following"] = int(random.uniform(80, 800))
                 features["posts_count"] = int(random.uniform(10, 400))
-                features["account_age_days"] = round(random.uniform(100, 1500), 1)
+                features["account_age_days"] = fallback_age
                 features["bio"] = "Life explorer, coffee enthusiast ☕, book lover. Just sharing simple moments."
                 features["recent_post"] = "A lovely morning walk in the park. The trees are starting to change colors 🍂"
                 features["is_verified"] = 0
