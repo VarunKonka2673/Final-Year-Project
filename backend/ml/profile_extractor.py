@@ -237,6 +237,14 @@ class ProfileFeatureExtractor:
                         if following: scraped_data["following_count"] = self._parse_count(following.group(1))
                         if posts: scraped_data["posts_count"] = self._parse_count(posts.group(1))
                         
+                    # Fallback to body searches if counts not found in meta description
+                    if "follower_count" not in scraped_data:
+                        followers = re.search(r'([\d,.]+[KkMm]?)\s*followers', html_raw, re.I)
+                        if followers: scraped_data["follower_count"] = self._parse_count(followers.group(1))
+                    if "following_count" not in scraped_data:
+                        following = re.search(r'([\d,.]+[KkMm]?)\s*following', html_raw, re.I)
+                        if following: scraped_data["following_count"] = self._parse_count(following.group(1))
+
                     # Extract bio from description
                     meta_desc = self._extract_meta(html_raw, "description")
                     if meta_desc:
@@ -250,32 +258,39 @@ class ProfileFeatureExtractor:
                     title_content = self._extract_meta(html_raw, "og:title")
                     if title_content:
                         title_text = html.unescape(title_content.strip())
-                        # "National Geographic (@natgeo) • Instagram profile"
                         title_text = title_text.split("(")[0].split("on Instagram")[0].strip()
                         if title_text:
                             scraped_data["full_name"] = title_text
 
                 elif platform == "LinkedIn":
-                    # og:description has bio, experience, connections
                     content = self._extract_meta(html_raw, "og:description") or self._extract_meta(html_raw, "description")
                     if content:
                         content_decoded = html.unescape(content)
                         connections = re.search(r'([\d,.]+)\s*connections', content_decoded, re.I)
                         if connections: scraped_data["connections"] = self._parse_count(connections.group(1))
                         
-                        # Extract experience/education hints
+                        # Check description for followers count too
+                        followers = re.search(r'([\d,.]+[KkMm]?)\s*followers', content_decoded, re.I)
+                        if followers: scraped_data["follower_count"] = self._parse_count(followers.group(1))
+
                         experience = re.search(r'Experience:\s*([^·|]+)', content_decoded, re.I)
                         if experience: scraped_data["experience_detail"] = experience.group(1).strip()
                         
                         education = re.search(r'Education:\s*([^·|]+)', content_decoded, re.I)
                         if education: scraped_data["education_detail"] = education.group(1).strip()
 
-                        # Bio is before the first ·
                         parts = content_decoded.split("·")
                         if parts:
                             scraped_data["bio"] = parts[0].strip()
 
-                    # og:title has full name: "Bill Gates - Gates Foundation | LinkedIn"
+                    # Fallback to body searches for LinkedIn connections and followers
+                    if "follower_count" not in scraped_data:
+                        followers = re.search(r'([\d,.]+[KkMm]?)\s*followers', html_raw, re.I)
+                        if followers: scraped_data["follower_count"] = self._parse_count(followers.group(1))
+                    if "connections" not in scraped_data:
+                        connections = re.search(r'([\d,.]+[KkMm]?)\s*connections', html_raw, re.I)
+                        if connections: scraped_data["connections"] = self._parse_count(connections.group(1))
+
                     title_content = self._extract_meta(html_raw, "og:title")
                     if title_content:
                         title_text = html.unescape(title_content.strip())
@@ -284,16 +299,42 @@ class ProfileFeatureExtractor:
                             scraped_data["full_name"] = title_text
 
                 elif platform == "X / Twitter":
-                    # og:description has bio
                     content = self._extract_meta(html_raw, "og:description") or self._extract_meta(html_raw, "description")
                     if content:
                         scraped_data["bio"] = html.unescape(content).strip()
 
-                    # og:title: "NASA (@NASA) on X"
+                    # Extract stats from embedded JSON queries in public X.com profile page HTML
+                    followers = re.search(r'followers:(\d+)', html_raw)
+                    following = re.search(r'following:(\d+)', html_raw)
+                    tweets = re.search(r'tweets:(\d+)', html_raw)
+                    if followers: scraped_data["follower_count"] = int(followers.group(1))
+                    if following: scraped_data["following_count"] = int(following.group(1))
+                    if tweets: scraped_data["posts_count"] = int(tweets.group(1))
+
                     title_content = self._extract_meta(html_raw, "og:title")
                     if title_content:
                         title_text = html.unescape(title_content.strip())
                         title_text = title_text.split("(")[0].split("on X")[0].strip()
+                        if title_text:
+                            scraped_data["full_name"] = title_text
+
+                elif platform == "TikTok":
+                    content = self._extract_meta(html_raw, "og:description") or self._extract_meta(html_raw, "description")
+                    if content:
+                        followers = re.search(r'([\d,.]+[KkMm]?)\s*Followers', content, re.I)
+                        likes = re.search(r'([\d,.]+[KkMm]?)\s*Likes', content, re.I)
+                        if followers: scraped_data["follower_count"] = self._parse_count(followers.group(1))
+                        if likes: scraped_data["likes_count"] = self._parse_count(likes.group(1))
+
+                    # Fallback to body searches for TikTok followers
+                    if "follower_count" not in scraped_data:
+                        followers = re.search(r'([\d,.]+[KkMm]?)\s*followers', html_raw, re.I)
+                        if followers: scraped_data["follower_count"] = self._parse_count(followers.group(1))
+
+                    title_content = self._extract_meta(html_raw, "og:title")
+                    if title_content:
+                        title_text = html.unescape(title_content.strip())
+                        title_text = title_text.split("(")[0].split("on TikTok")[0].strip()
                         if title_text:
                             scraped_data["full_name"] = title_text
 
@@ -460,6 +501,9 @@ class ProfileFeatureExtractor:
         # Platform specific metric mappings & extra attributes
         if platform == "LinkedIn":
             features["connections"] = scraped_stats.get("connections", 0 if is_scraped else int(features["following"] * random.uniform(0.8, 2.5)))
+            # Set a reasonable default for following count on LinkedIn to avoid returning 0
+            if features.get("following", 0) == 0:
+                features["following"] = max(10, int(features["connections"] * 0.9) if features.get("connections", 0) > 0 else int(features.get("followers", 0) * 0.05))
             features["headline"] = scraped_stats.get("headline", "" if is_scraped else f"Professional Account at {username.title()}")
             features["is_premium"] = scraped_stats.get("is_premium", 0 if is_scraped else (1 if random.random() < 0.3 else 0))
             features["experience_count"] = scraped_stats.get("experience_count", 0 if is_scraped else int(random.uniform(2, 7)))
