@@ -216,7 +216,10 @@ class ProfileFeatureExtractor:
 
                 req = urllib.request.Request(
                     url,
-                    headers={"User-Agent": self.user_agent}
+                    headers={
+                        "User-Agent": self.user_agent,
+                        "Accept-Language": "en-US,en;q=0.9"
+                    }
                 )
 
             # Fetch HTML content via opener with a slight timeout buffer for proxy/API latency
