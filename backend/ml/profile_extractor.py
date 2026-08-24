@@ -163,11 +163,11 @@ class ProfileFeatureExtractor:
     def _extract_meta(self, html: str, key: str) -> str:
         """Helper to extract meta content regardless of attribute order."""
         # Pattern 1: name/property before content
-        m = re.search(r'<meta[^>]*(?:name|property)="' + re.escape(key) + r'"[^>]*content="([^"]*)"', html, re.I)
+        m = re.search(r'<meta[^>]*(?:name|property)="' + re.escape(key) + r'"[^>]*content="([^"]*)"', html, re.I | re.S)
         if m:
             return m.group(1)
         # Pattern 2: content before name/property
-        m = re.search(r'<meta[^>]*content="([^"]*)"[^>]*(?:name|property)="' + re.escape(key) + r'"', html, re.I)
+        m = re.search(r'<meta[^>]*content="([^"]*)"[^>]*(?:name|property)="' + re.escape(key) + r'"', html, re.I | re.S)
         if m:
             return m.group(1)
         return None
@@ -214,10 +214,16 @@ class ProfileFeatureExtractor:
                 else:
                     opener = urllib.request.build_opener(https_handler)
 
+                # LinkedIn blocks Discordbot User-Agent with HTTP 999, but allows Googlebot
+                if platform == "LinkedIn":
+                    ua = "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)"
+                else:
+                    ua = self.user_agent
+
                 req = urllib.request.Request(
                     url,
                     headers={
-                        "User-Agent": self.user_agent,
+                        "User-Agent": ua,
                         "Accept-Language": "en-US,en;q=0.9"
                     }
                 )
@@ -251,9 +257,9 @@ class ProfileFeatureExtractor:
                     # Extract bio from description
                     meta_desc = self._extract_meta(html_raw, "description")
                     if meta_desc:
-                        bio_match = re.search(r'on Instagram:\s*&quot;(.*?)&quot;', meta_desc, re.I)
+                        bio_match = re.search(r'on Instagram:\s*&quot;([\s\S]*?)&quot;', meta_desc, re.I)
                         if not bio_match:
-                            bio_match = re.search(r'on Instagram:\s*"(.*?)"', meta_desc, re.I)
+                            bio_match = re.search(r'on Instagram:\s*"([\s\S]*?)"', meta_desc, re.I)
                         if bio_match:
                             scraped_data["bio"] = html.unescape(bio_match.group(1)).strip()
 
@@ -276,15 +282,18 @@ class ProfileFeatureExtractor:
                         followers = re.search(r'([\d,.]+[KkMm]?)\s*followers', content_decoded, re.I)
                         if followers: scraped_data["follower_count"] = self._parse_count(followers.group(1))
 
-                        experience = re.search(r'Experience:\s*([^·|]+)', content_decoded, re.I)
+                        experience = re.search(r'Experience:\s*([^·|]+)', content_decoded, re.I | re.S)
                         if experience: scraped_data["experience_detail"] = experience.group(1).strip()
                         
-                        education = re.search(r'Education:\s*([^·|]+)', content_decoded, re.I)
+                        education = re.search(r'Education:\s*([^·|]+)', content_decoded, re.I | re.S)
                         if education: scraped_data["education_detail"] = education.group(1).strip()
 
                         parts = content_decoded.split("·")
                         if parts:
-                            scraped_data["bio"] = parts[0].strip()
+                            bio_candidate = parts[0].strip()
+                            # Filter out generic redirect text like "View Varun's profile on LinkedIn..."
+                            if not (bio_candidate.startswith("View ") and "profile on LinkedIn" in bio_candidate):
+                                scraped_data["bio"] = bio_candidate
 
                     # Fallback to body searches for LinkedIn connections and followers
                     if "follower_count" not in scraped_data:
@@ -304,7 +313,17 @@ class ProfileFeatureExtractor:
                 elif platform == "X / Twitter":
                     content = self._extract_meta(html_raw, "og:description") or self._extract_meta(html_raw, "description")
                     if content:
-                        scraped_data["bio"] = html.unescape(content).strip()
+                        bio_text = html.unescape(content).strip()
+                        generic_desc_patterns = [
+                            "from breaking news and entertainment",
+                            "log in to twitter",
+                            "log in to x",
+                            "signup",
+                            "sign up"
+                        ]
+                        # Only use scraped bio if it is not a generic login redirect page description
+                        if not any(pat in bio_text.lower() for pat in generic_desc_patterns):
+                            scraped_data["bio"] = bio_text
 
                     # Extract stats from embedded JSON queries in public X.com profile page HTML
                     followers = re.search(r'followers:(\d+)', html_raw)
@@ -578,7 +597,7 @@ class ProfileFeatureExtractor:
         
         # Step 1: Try public HTML scraping
         scraped_stats = {}
-        if platform in ("Instagram", "X / Twitter", "LinkedIn") and url.startswith("http"):
+        if platform in ("Instagram", "X / Twitter", "LinkedIn", "TikTok", "Facebook", "Reddit") and url.startswith("http"):
             scraped_stats = self.attempt_public_scrape(url, platform)
             
         # If it is a known real profile, seed its stats first

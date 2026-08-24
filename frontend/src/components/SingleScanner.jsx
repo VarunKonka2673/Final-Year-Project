@@ -1,16 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { API_BASE } from '../config';
-import { 
-  ShieldAlert, 
-  ShieldCheck, 
-  AlertTriangle, 
-  Zap, 
-  Sparkles, 
-  Sliders, 
-  FileText, 
-  BarChart2, 
-  CheckCircle2, 
-  XCircle, 
+import {
+  ShieldAlert,
+  ShieldCheck,
+  AlertTriangle,
+  Zap,
+  Sparkles,
+  Sliders,
+  FileText,
+  BarChart2,
+  CheckCircle2,
+  XCircle,
   HelpCircle,
   TrendingUp,
   Cpu
@@ -127,32 +127,232 @@ const PRESETS = {
   }
 };
 
+const INITIAL_BLANK_FORM = {
+  platform: 'Instagram',
+  username: '',
+  full_name: '',
+  display_name: '',
+  bio: '',
+  recent_post: '',
+  follower_count: '',
+  followers: '',
+  following_count: '',
+  following: '',
+  account_age_days: '',
+  posts_count: '',
+  media_count: '',
+  video_count: '',
+  tweet_count: '',
+  connections: '',
+  likes_count: '',
+  experience_count: '',
+  education_count: '',
+  posting_frequency_per_day: '',
+  avg_engagement_rate: '',
+  has_profile_pic: 0,
+  is_verified: 0,
+  has_url: 0,
+  is_premium: 0,
+  is_private: 0,
+};
+
+const convertNumericToString = (data) => {
+  const cloned = { ...data };
+  const numericFields = [
+    'follower_count', 'followers',
+    'following_count', 'following',
+    'account_age_days',
+    'posts_count', 'media_count', 'video_count', 'tweet_count',
+    'connections', 'likes_count',
+    'experience_count', 'education_count',
+    'posting_frequency_per_day', 'avg_engagement_rate'
+  ];
+  numericFields.forEach(field => {
+    if (cloned[field] !== undefined && cloned[field] !== null) {
+      cloned[field] = String(cloned[field]);
+    }
+  });
+  return cloned;
+};
+
+const validateField = (field, value) => {
+  if (value === undefined || value === null || value === '') return null;
+  const valStr = String(value).trim();
+  if (valStr === '') return null;
+
+  if (field === 'posting_frequency_per_day' || field === 'avg_engagement_rate') {
+    if (!/^\d*\.?\d*$/.test(valStr) || valStr === '.') {
+      return 'Enter valid data';
+    }
+  } else {
+    if (!/^\d+$/.test(valStr)) {
+      return 'Enter valid data';
+    }
+  }
+  return null;
+};
+
+const getLocalStorageValue = (key, fallback) => {
+  try {
+    const saved = localStorage.getItem(key);
+    if (saved !== null) {
+      return JSON.parse(saved);
+    }
+  } catch (e) {
+    console.error("Error reading localStorage", e);
+  }
+  return fallback;
+};
+
 export default function SingleScanner() {
-  const [scanMode, setScanMode] = useState('url'); // 'url' or 'attributes'
-  const [profileUrl, setProfileUrl] = useState('');
-  const [formData, setFormData] = useState(PRESETS.crypto_scam.data);
+  const [scanMode, setScanMode] = useState(() => getLocalStorageValue('sg_scanMode', 'url')); // 'url' or 'attributes'
+  const [profileUrl, setProfileUrl] = useState(() => getLocalStorageValue('sg_profileUrl', ''));
+  const [formData, setFormData] = useState(() => getLocalStorageValue('sg_formData', INITIAL_BLANK_FORM));
+  const [validationErrors, setValidationErrors] = useState({});
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState(null);
+  const [result, setResult] = useState(() => getLocalStorageValue('sg_result', null));
   const [error, setError] = useState(null);
+
+  useEffect(() => {
+    localStorage.setItem('sg_scanMode', JSON.stringify(scanMode));
+  }, [scanMode]);
+
+  useEffect(() => {
+    localStorage.setItem('sg_profileUrl', JSON.stringify(profileUrl));
+  }, [profileUrl]);
+
+  useEffect(() => {
+    localStorage.setItem('sg_formData', JSON.stringify(formData));
+  }, [formData]);
+
+  useEffect(() => {
+    localStorage.setItem('sg_result', JSON.stringify(result));
+  }, [result]);
+
+  useEffect(() => {
+    const handleUnload = () => {
+      localStorage.removeItem('sg_scanMode');
+      localStorage.removeItem('sg_profileUrl');
+      localStorage.removeItem('sg_formData');
+      localStorage.removeItem('sg_result');
+    };
+    window.addEventListener('beforeunload', handleUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleUnload);
+    };
+  }, []);
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const applyPreset = (key) => {
-    setFormData(PRESETS[key].data);
+  const handleNumericInputChange = (field, value) => {
+    handleInputChange(field, value);
+
+    const errorMsg = validateField(field, value);
+    setValidationErrors(prev => ({
+      ...prev,
+      [field]: errorMsg
+    }));
+
+    if (field === 'follower_count') {
+      handleInputChange('followers', value);
+      setValidationErrors(prev => ({ ...prev, followers: errorMsg }));
+    } else if (field === 'following_count') {
+      handleInputChange('following', value);
+      setValidationErrors(prev => ({ ...prev, following: errorMsg }));
+    } else if (field === 'posts_count') {
+      handleInputChange('media_count', value);
+      handleInputChange('video_count', value);
+      handleInputChange('tweet_count', value);
+      setValidationErrors(prev => ({
+        ...prev,
+        media_count: errorMsg,
+        video_count: errorMsg,
+        tweet_count: errorMsg
+      }));
+    }
+  };
+
+  const handleClearUrlData = () => {
+    setProfileUrl('');
     setResult(null);
+    setFormData(INITIAL_BLANK_FORM);
+    setValidationErrors({});
+    setError(null);
+  };
+
+  const applyPreset = (key) => {
+    setFormData(convertNumericToString(PRESETS[key].data));
+    setResult(null);
+    setValidationErrors({});
   };
 
   const handleScan = async (e) => {
     if (e) e.preventDefault();
     setLoading(true);
     setError(null);
+
+    const currentErrors = {};
+    const numericFields = [
+      'follower_count', 'followers',
+      'following_count', 'following',
+      'account_age_days',
+      'posts_count', 'media_count', 'video_count', 'tweet_count',
+      'connections', 'likes_count',
+      'experience_count', 'education_count',
+      'posting_frequency_per_day', 'avg_engagement_rate'
+    ];
+
+    numericFields.forEach(field => {
+      const err = validateField(field, formData[field]);
+      if (err) {
+        currentErrors[field] = err;
+      }
+    });
+
+    if (Object.keys(currentErrors).length > 0) {
+      setValidationErrors(currentErrors);
+      setError('Please fix all validation errors before running analysis.');
+      setLoading(false);
+      return;
+    }
+
     try {
+      const payload = { ...formData };
+      numericFields.forEach(field => {
+        if (payload[field] !== undefined && payload[field] !== null) {
+          const valStr = String(payload[field]).trim();
+          if (valStr === '') {
+            payload[field] = 0.0;
+          } else {
+            payload[field] = parseFloat(valStr) || 0.0;
+          }
+        } else {
+          payload[field] = 0.0;
+        }
+      });
+
+      const defaults = {
+        connections: 0.0,
+        likes_count: 0.0,
+        experience_count: 0,
+        education_count: 0,
+        follower_count: 0.0,
+        following_count: 0.0,
+        account_age_days: 0.0,
+        posts_count: 0.0
+      };
+      Object.entries(defaults).forEach(([key, fallback]) => {
+        if (payload[key] === undefined || payload[key] === null) {
+          payload[key] = fallback;
+        }
+      });
+
       const response = await fetch(`${API_BASE}/api/predict`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(payload)
       });
       if (!response.ok) {
         throw new Error(`API Error: ${response.statusText}`);
@@ -183,8 +383,9 @@ export default function SingleScanner() {
       const data = await response.json();
       setResult(data);
       if (data.raw_extracted_features) {
-        setFormData(data.raw_extracted_features);
+        setFormData(convertNumericToString(data.raw_extracted_features));
         setScanMode('attributes');
+        setValidationErrors({});
       }
     } catch (err) {
       setError(err.message || 'Failed to scan profile link.');
@@ -202,7 +403,7 @@ export default function SingleScanner() {
 
   return (
     <div className="space-y-8 animate-fadeIn">
-      
+
       {/* Top Banner & Preset Selector */}
       <div className="glass-panel p-6 rounded-2xl border border-slate-800">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
@@ -239,22 +440,20 @@ export default function SingleScanner() {
         <button
           type="button"
           onClick={() => setScanMode('url')}
-          className={`px-6 py-2.5 text-xs font-bold border-b-2 cursor-pointer transition-all duration-200 ${
-            scanMode === 'url'
+          className={`px-6 py-2.5 text-xs font-bold border-b-2 cursor-pointer transition-all duration-200 ${scanMode === 'url'
               ? 'border-cyan-400 text-cyan-400 bg-cyan-400/5'
               : 'border-transparent text-slate-400 hover:text-slate-200'
-          }`}
+            }`}
         >
           🔍 Profile Link Analyzer
         </button>
         <button
           type="button"
           onClick={() => setScanMode('attributes')}
-          className={`px-6 py-2.5 text-xs font-bold border-b-2 cursor-pointer transition-all duration-200 ${
-            scanMode === 'attributes'
+          className={`px-6 py-2.5 text-xs font-bold border-b-2 cursor-pointer transition-all duration-200 ${scanMode === 'attributes'
               ? 'border-cyan-400 text-cyan-400 bg-cyan-400/5'
               : 'border-transparent text-slate-400 hover:text-slate-200'
-          }`}
+            }`}
         >
           ⚙️ Detailed Attributes Form
         </button>
@@ -262,7 +461,7 @@ export default function SingleScanner() {
 
       {/* Main Grid: Input Form & Result Dashboard */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        
+
         {/* Left Column: Form Section (5 cols) */}
         {scanMode === 'url' ? (
           <form onSubmit={handleUrlScan} className="lg:col-span-5 space-y-6">
@@ -274,17 +473,29 @@ export default function SingleScanner() {
                 </span>
                 <span className="text-[11px] font-mono text-slate-400">ML Heuristic Crawler</span>
               </div>
-              
+
               <div>
                 <label className="block text-xs font-medium text-slate-300 mb-1.5">Paste Social Profile URL</label>
-                <input
-                  type="url"
-                  value={profileUrl}
-                  onChange={(e) => setProfileUrl(e.target.value)}
-                  className="w-full px-3 py-2.5 text-xs bg-slate-900/90 border border-slate-700 rounded-lg text-slate-100 focus:outline-none focus:border-cyan-400 font-mono placeholder:text-slate-600"
-                  placeholder="e.g. https://x.com/elonmusk"
-                  required
-                />
+                <div className="relative">
+                  <input
+                    type="url"
+                    value={profileUrl}
+                    onChange={(e) => setProfileUrl(e.target.value)}
+                    className="w-full pl-3 pr-10 py-2.5 text-xs bg-slate-900/90 border border-slate-700 rounded-lg text-slate-100 focus:outline-none focus:border-cyan-400 font-mono placeholder:text-slate-600"
+                    placeholder="e.g. https://x.com/elonmusk"
+                    required
+                  />
+                  {profileUrl && (
+                    <button
+                      type="button"
+                      onClick={handleClearUrlData}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 transition-colors cursor-pointer"
+                      title="Clear URL and results"
+                    >
+                      <XCircle className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
                 <p className="text-[10px] text-slate-500 mt-2 leading-relaxed">
                   Supports X/Twitter, Instagram, Facebook, LinkedIn, TikTok, and Reddit. Parses profile metadata and runs semantic ML checks to detect artificial accounts.
                 </p>
@@ -321,7 +532,7 @@ export default function SingleScanner() {
               </div>
 
               {/* Profile & Handle */}
-              <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-4">
                 <div>
                   <label className="block text-xs font-medium text-slate-300 mb-1">Platform</label>
                   <select
@@ -412,57 +623,86 @@ export default function SingleScanner() {
                 <div>
                   <label className="block text-[11px] text-slate-400 mb-1">Followers</label>
                   <input
-                    type="number"
-                    value={formData.follower_count}
-                    onChange={(e) => {
-                      handleInputChange('follower_count', parseFloat(e.target.value) || 0);
-                      handleInputChange('followers', parseFloat(e.target.value) || 0);
-                    }}
-                    className="w-full px-2.5 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-lg text-slate-100 font-mono"
+                    type="text"
+                    value={formData.follower_count ?? ''}
+                    onChange={(e) => handleNumericInputChange('follower_count', e.target.value)}
+                    placeholder="e.g. 1500"
+                    className={`w-full px-2.5 py-1.5 text-xs bg-slate-900 border rounded-lg text-slate-100 font-mono transition-colors focus:outline-none ${validationErrors.follower_count
+                        ? 'border-rose-500/60 focus:border-rose-500'
+                        : 'border-slate-700 focus:border-cyan-400'
+                      }`}
                   />
+                  {validationErrors.follower_count && (
+                    <span className="text-[10px] text-rose-400 mt-1 block">⚠️ {validationErrors.follower_count}</span>
+                  )}
                 </div>
                 <div>
                   <label className="block text-[11px] text-slate-400 mb-1">Following</label>
                   <input
-                    type="number"
-                    value={formData.following_count}
-                    onChange={(e) => {
-                      handleInputChange('following_count', parseFloat(e.target.value) || 1);
-                      handleInputChange('following', parseFloat(e.target.value) || 1);
-                    }}
-                    className="w-full px-2.5 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-lg text-slate-100 font-mono"
+                    type="text"
+                    value={formData.following_count ?? ''}
+                    onChange={(e) => handleNumericInputChange('following_count', e.target.value)}
+                    placeholder="e.g. 500"
+                    className={`w-full px-2.5 py-1.5 text-xs bg-slate-900 border rounded-lg text-slate-100 font-mono transition-colors focus:outline-none ${validationErrors.following_count
+                        ? 'border-rose-500/60 focus:border-rose-500'
+                        : 'border-slate-700 focus:border-cyan-400'
+                      }`}
                   />
+                  {validationErrors.following_count && (
+                    <span className="text-[10px] text-rose-400 mt-1 block">⚠️ {validationErrors.following_count}</span>
+                  )}
                 </div>
                 <div>
                   {formData.platform === 'LinkedIn' ? (
                     <div>
                       <label className="block text-[11px] text-slate-400 mb-1">Connections</label>
                       <input
-                        type="number"
-                        value={formData.connections || 0}
-                        onChange={(e) => handleInputChange('connections', parseFloat(e.target.value) || 0)}
-                        className="w-full px-2.5 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-lg text-slate-100 font-mono"
+                        type="text"
+                        value={formData.connections ?? ''}
+                        onChange={(e) => handleNumericInputChange('connections', e.target.value)}
+                        placeholder="e.g. 250"
+                        className={`w-full px-2.5 py-1.5 text-xs bg-slate-900 border rounded-lg text-slate-100 font-mono transition-colors focus:outline-none ${validationErrors.connections
+                            ? 'border-rose-500/60 focus:border-rose-500'
+                            : 'border-slate-700 focus:border-cyan-400'
+                          }`}
                       />
+                      {validationErrors.connections && (
+                        <span className="text-[10px] text-rose-400 mt-1 block">⚠️ {validationErrors.connections}</span>
+                      )}
                     </div>
                   ) : formData.platform === 'TikTok' ? (
                     <div>
                       <label className="block text-[11px] text-slate-400 mb-1">Likes Count</label>
                       <input
-                        type="number"
-                        value={formData.likes_count || 0}
-                        onChange={(e) => handleInputChange('likes_count', parseFloat(e.target.value) || 0)}
-                        className="w-full px-2.5 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-lg text-slate-100 font-mono"
+                        type="text"
+                        value={formData.likes_count ?? ''}
+                        onChange={(e) => handleNumericInputChange('likes_count', e.target.value)}
+                        placeholder="e.g. 10000"
+                        className={`w-full px-2.5 py-1.5 text-xs bg-slate-900 border rounded-lg text-slate-100 font-mono transition-colors focus:outline-none ${validationErrors.likes_count
+                            ? 'border-rose-500/60 focus:border-rose-500'
+                            : 'border-slate-700 focus:border-cyan-400'
+                          }`}
                       />
+                      {validationErrors.likes_count && (
+                        <span className="text-[10px] text-rose-400 mt-1 block">⚠️ {validationErrors.likes_count}</span>
+                      )}
                     </div>
                   ) : (
                     <div>
                       <label className="block text-[11px] text-slate-400 mb-1">Age (Days)</label>
                       <input
-                        type="number"
-                        value={formData.account_age_days || 1}
-                        onChange={(e) => handleInputChange('account_age_days', parseFloat(e.target.value) || 1)}
-                        className="w-full px-2.5 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-lg text-slate-100 font-mono"
+                        type="text"
+                        value={formData.account_age_days ?? ''}
+                        onChange={(e) => handleNumericInputChange('account_age_days', e.target.value)}
+                        placeholder="e.g. 365"
+                        className={`w-full px-2.5 py-1.5 text-xs bg-slate-900 border rounded-lg text-slate-100 font-mono transition-colors focus:outline-none ${validationErrors.account_age_days
+                            ? 'border-rose-500/60 focus:border-rose-500'
+                            : 'border-slate-700 focus:border-cyan-400'
+                          }`}
                       />
+                      {validationErrors.account_age_days && (
+                        <span className="text-[10px] text-rose-400 mt-1 block">⚠️ {validationErrors.account_age_days}</span>
+                      )}
                     </div>
                   )}
                 </div>
@@ -472,42 +712,57 @@ export default function SingleScanner() {
               <div className="grid grid-cols-3 gap-3 pt-2">
                 <div>
                   <label className="block text-[11px] text-slate-400 mb-1">
-                    {formData.platform === 'LinkedIn' ? 'Posts' : 
-                     formData.platform === 'X / Twitter' ? 'Tweets' :
-                     formData.platform === 'TikTok' ? 'Videos' : 'Media Count'}
+                    {formData.platform === 'LinkedIn' ? 'Posts' :
+                      formData.platform === 'X / Twitter' ? 'Tweets' :
+                        formData.platform === 'TikTok' ? 'Videos' : 'Media Count'}
                   </label>
                   <input
-                    type="number"
-                    value={formData.media_count || formData.video_count || formData.tweet_count || formData.posts_count || 0}
-                    onChange={(e) => {
-                      const val = parseFloat(e.target.value) || 0;
-                      handleInputChange('posts_count', val);
-                      handleInputChange('media_count', val);
-                      handleInputChange('video_count', val);
-                      handleInputChange('tweet_count', val);
-                    }}
-                    className="w-full px-2.5 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-lg text-slate-100 font-mono"
+                    type="text"
+                    value={formData.posts_count ?? ''}
+                    onChange={(e) => handleNumericInputChange('posts_count', e.target.value)}
+                    placeholder="e.g. 150"
+                    className={`w-full px-2.5 py-1.5 text-xs bg-slate-900 border rounded-lg text-slate-100 font-mono transition-colors focus:outline-none ${validationErrors.posts_count
+                        ? 'border-rose-500/60 focus:border-rose-500'
+                        : 'border-slate-700 focus:border-cyan-400'
+                      }`}
                   />
+                  {validationErrors.posts_count && (
+                    <span className="text-[10px] text-rose-400 mt-1 block">⚠️ {validationErrors.posts_count}</span>
+                  )}
                 </div>
                 {formData.platform === 'LinkedIn' && (
                   <>
                     <div>
                       <label className="block text-[11px] text-slate-400 mb-1">Experience</label>
                       <input
-                        type="number"
-                        value={formData.experience_count || 0}
-                        onChange={(e) => handleInputChange('experience_count', parseInt(e.target.value) || 0)}
-                        className="w-full px-2.5 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-lg text-slate-100 font-mono"
+                        type="text"
+                        value={formData.experience_count ?? ''}
+                        onChange={(e) => handleNumericInputChange('experience_count', e.target.value)}
+                        placeholder="e.g. 3"
+                        className={`w-full px-2.5 py-1.5 text-xs bg-slate-900 border rounded-lg text-slate-100 font-mono transition-colors focus:outline-none ${validationErrors.experience_count
+                            ? 'border-rose-500/60 focus:border-rose-500'
+                            : 'border-slate-700 focus:border-cyan-400'
+                          }`}
                       />
+                      {validationErrors.experience_count && (
+                        <span className="text-[10px] text-rose-400 mt-1 block">⚠️ {validationErrors.experience_count}</span>
+                      )}
                     </div>
                     <div>
                       <label className="block text-[11px] text-slate-400 mb-1">Education</label>
                       <input
-                        type="number"
-                        value={formData.education_count || 0}
-                        onChange={(e) => handleInputChange('education_count', parseInt(e.target.value) || 0)}
-                        className="w-full px-2.5 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-lg text-slate-100 font-mono"
+                        type="text"
+                        value={formData.education_count ?? ''}
+                        onChange={(e) => handleNumericInputChange('education_count', e.target.value)}
+                        placeholder="e.g. 1"
+                        className={`w-full px-2.5 py-1.5 text-xs bg-slate-900 border rounded-lg text-slate-100 font-mono transition-colors focus:outline-none ${validationErrors.education_count
+                            ? 'border-rose-500/60 focus:border-rose-500'
+                            : 'border-slate-700 focus:border-cyan-400'
+                          }`}
                       />
+                      {validationErrors.education_count && (
+                        <span className="text-[10px] text-rose-400 mt-1 block">⚠️ {validationErrors.education_count}</span>
+                      )}
                     </div>
                   </>
                 )}
@@ -518,22 +773,34 @@ export default function SingleScanner() {
                 <div>
                   <label className="block text-[11px] text-slate-400 mb-1">Posts / Day</label>
                   <input
-                    type="number"
-                    step="0.1"
-                    value={formData.posting_frequency_per_day}
-                    onChange={(e) => handleInputChange('posting_frequency_per_day', parseFloat(e.target.value) || 0)}
-                    className="w-full px-2.5 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-lg text-slate-100 font-mono"
+                    type="text"
+                    value={formData.posting_frequency_per_day ?? ''}
+                    onChange={(e) => handleNumericInputChange('posting_frequency_per_day', e.target.value)}
+                    placeholder="e.g. 2.5"
+                    className={`w-full px-2.5 py-1.5 text-xs bg-slate-900 border rounded-lg text-slate-100 font-mono transition-colors focus:outline-none ${validationErrors.posting_frequency_per_day
+                        ? 'border-rose-500/60 focus:border-rose-500'
+                        : 'border-slate-700 focus:border-cyan-400'
+                      }`}
                   />
+                  {validationErrors.posting_frequency_per_day && (
+                    <span className="text-[10px] text-rose-400 mt-1 block">⚠️ {validationErrors.posting_frequency_per_day}</span>
+                  )}
                 </div>
                 <div>
                   <label className="block text-[11px] text-slate-400 mb-1">Engagement Rate (%)</label>
                   <input
-                    type="number"
-                    step="0.1"
-                    value={formData.avg_engagement_rate}
-                    onChange={(e) => handleInputChange('avg_engagement_rate', parseFloat(e.target.value) || 0)}
-                    className="w-full px-2.5 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-lg text-slate-100 font-mono"
+                    type="text"
+                    value={formData.avg_engagement_rate ?? ''}
+                    onChange={(e) => handleNumericInputChange('avg_engagement_rate', e.target.value)}
+                    placeholder="e.g. 4.8"
+                    className={`w-full px-2.5 py-1.5 text-xs bg-slate-900 border rounded-lg text-slate-100 font-mono transition-colors focus:outline-none ${validationErrors.avg_engagement_rate
+                        ? 'border-rose-500/60 focus:border-rose-500'
+                        : 'border-slate-700 focus:border-cyan-400'
+                      }`}
                   />
+                  {validationErrors.avg_engagement_rate && (
+                    <span className="text-[10px] text-rose-400 mt-1 block">⚠️ {validationErrors.avg_engagement_rate}</span>
+                  )}
                 </div>
               </div>
 
@@ -613,7 +880,7 @@ export default function SingleScanner() {
 
         {/* Right Column: Dynamic Diagnosis & Multi-Model Breakdown (7 cols) */}
         <div className="lg:col-span-7 space-y-6">
-          
+
           {error && (
             <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-3">
               <AlertTriangle className="w-5 h-5 flex-shrink-0" />
@@ -644,7 +911,7 @@ export default function SingleScanner() {
 
           {result && (
             <div className="space-y-6 animate-fadeIn">
-              
+
               {/* Verdict Header Hero Card */}
               {(() => {
                 const colors = getRiskColor(result.risk_score);
@@ -652,7 +919,7 @@ export default function SingleScanner() {
                 return (
                   <div className={`glass-panel p-6 rounded-2xl border ${colors.border} ${colors.glow} relative overflow-hidden`}>
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                      
+
                       {/* Left: Verdict Text */}
                       <div className="space-y-1">
                         <div className="flex items-center gap-2 flex-wrap">
@@ -760,9 +1027,8 @@ export default function SingleScanner() {
                       <div key={modelName} className="p-3 rounded-xl bg-slate-900/90 border border-slate-800 flex flex-col justify-between space-y-2">
                         <div className="text-xs font-semibold text-slate-300">{modelName}</div>
                         <div className="flex items-center justify-between">
-                          <span className={`text-[11px] font-bold px-2 py-0.5 rounded ${
-                            isModelFake ? 'bg-rose-500/20 text-rose-300' : 'bg-emerald-500/20 text-emerald-300'
-                          }`}>
+                          <span className={`text-[11px] font-bold px-2 py-0.5 rounded ${isModelFake ? 'bg-rose-500/20 text-rose-300' : 'bg-emerald-500/20 text-emerald-300'
+                            }`}>
                             {data.prediction}
                           </span>
                           <span className="text-[11px] font-mono text-slate-400">
