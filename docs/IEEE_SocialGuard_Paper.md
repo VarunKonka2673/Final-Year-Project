@@ -1,6 +1,9 @@
 # SocialGuard: A Multi-Modal Machine Learning and Natural Language Processing Framework for Detecting Fraudulent Social Media Accounts and Coordinated Bot Networks
 
-**Abstract**—The rapid proliferation of automated bot accounts, phishing rings, and follower-farming syndicates across social media platforms threatens digital trust, compromises algorithmic integrity, and amplifies coordinated disinformation. Conventional defense mechanisms relying on superficial thresholding or static blacklists fail against modern adversarial bots that emulate organic behavioral dynamics and cycle synthetic credentials. In this paper, we propose **SocialGuard**, a multi-modal defense framework that synthesizes three orthogonal analytical dimensions: (i) structural profile integrity indicators, (ii) behavioral interaction velocity metrics, and (iii) natural language processing (NLP) semantics extracted from profile biographies and post streams. To overcome severe real-world class imbalance where fraudulent accounts constitute an adversarial minority, we introduce a stratified Synthetic Minority Over-sampling Technique (SMOTE) pipeline. We benchmark six prominent machine learning classifiers—Random Forest, Decision Tree, Support Vector Machine (SVM), Logistic Regression, K-Nearest Neighbors (KNN), and Gradient Boosting—demonstrating superior classification performance (F1-score of 98.4% and ROC-AUC of 99.1% with Random Forest). Additionally, we incorporate Isolation Forest for unsupervised zero-day anomaly scoring and DBSCAN density clustering in 2D Principal Component Analysis (PCA) space to uncover synchronized bot clusters. We evaluate the proposed system on a multi-platform dataset of 6,000 accounts and deploy it via a high-performance REST API and real-time interactive sentinel dashboard.
+---
+
+### Abstract
+The rapid proliferation of automated bot accounts, phishing rings, and follower-farming syndicates across social media platforms threatens digital trust, compromises algorithmic integrity, and amplifies coordinated disinformation. Conventional defense mechanisms relying on superficial thresholding or static blacklists fail against modern adversarial bots that emulate organic behavioral dynamics and cycle synthetic credentials. In this paper, we propose **SocialGuard**, a multi-modal defense framework that synthesizes three orthogonal analytical dimensions: (i) structural profile integrity indicators, (ii) behavioral interaction velocity metrics, and (iii) natural language processing (NLP) semantics extracted from profile biographies and post streams. To overcome severe real-world class imbalance where fraudulent accounts constitute an adversarial minority, we introduce a stratified Synthetic Minority Over-sampling Technique (SMOTE) pipeline. We benchmark six prominent machine learning classifiers—Random Forest, Decision Tree, Support Vector Machine (SVM), Logistic Regression, K-Nearest Neighbors (KNN), and Gradient Boosting—demonstrating superior classification performance (F1-score of 100.0% with Random Forest, 99.56% with Gradient Boosting, and 98.03% with SVM). Additionally, we incorporate Isolation Forest for unsupervised zero-day anomaly scoring and DBSCAN density clustering in 2D Principal Component Analysis (PCA) space to uncover synchronized bot clusters. We evaluate the proposed system on a multi-platform dataset of 6,000 accounts and deploy it via a high-performance REST API and real-time interactive sentinel dashboard.
 
 **Index Terms**—Bot Detection, Fraud Detection, Multi-Modal Machine Learning, Natural Language Processing, SMOTE, Isolation Forest, DBSCAN, Cyber Threat Intelligence, API Security.
 
@@ -8,47 +11,40 @@
 
 ## I. INTRODUCTION
 
-Digital social platforms have become primary vectors for social engineering, financial cryptocurrency scams, identity impersonation, and orchestrated astroturfing campaigns. Sophisticated bot syndicates routinely generate thousands of accounts designed to mimic authentic users while executing high-velocity spamming, follow-farming, or link-injection operations. The detection of these accounts has evolved into an arms race, as adversaries bypass static rule-based rate limiters by purchasing aged credentials, inflating synthetic follower networks, or altering textual syntax.
+Online Social Networks (OSNs) have transformed modern communication, public discourse, and electronic commerce. However, this ubiquity has made them prime targets for malicious actors. Automated bot accounts, sybil networks, and coordinate fraud groups are routinely deployed to manipulate financial markets (especially cryptocurrency), influence democratic elections, hijack commercial brands, and conduct large-scale phishing campaigns. The detection of these malicious accounts has evolved into a continuous arms race. Early bots were easily identifiable using simple heuristic rules, such as high posting frequencies or default profile configurations. Modern botnets, however, employ sophisticated scripts that mimic human circadian cycles, generate synthetic biographies using Large Language Models (LLMs), buy fake engagement, and coordinate actions across distributed IP addresses.
 
-Conventional defense systems frequently suffer from three core limitations:
-1. **Unimodal Dependency**: Systems focusing purely on metadata indicators are easily circumvented by automated scripts that purchase high-follower counts or complete profiles. Conversly, relying strictly on text NLP ignores non-textual follow-farming rings.
-2. **Class Imbalance Vulnerabilities**: In real-world social networks, organic users heavily outnumber fraudulent accounts. Standard classifiers trained on unweighted datasets exhibit high overall accuracy but catastrophically low minority recall (Type II errors), leaving networks vulnerable.
-3. **Absence of Coordinated Anomaly Detection**: Supervised models evaluate accounts in isolation, failing to detect coordinated botnets that execute synchronized actions in feature space.
+Defense systems traditionally encounter three major roadblocks:
+1. **Unimodal Vulnerability**: Security models that rely strictly on profile metadata (such as follower/following counts or account age) are easily bypassed by bots that maintain high follower counts or complete profiles. Conversely, models relying purely on natural language processing (NLP) to inspect user posts miss non-textual bots (such as silent follower-farms).
+2. **Severe Class Imbalance**: In real-world social platforms, legitimate organic accounts vastly outnumber malicious or automated ones. Standard machine learning models trained on unbalanced datasets optimize for overall accuracy, which results in high false-negative rates for the minority bot class, rendering the system vulnerable to stealthy attacks.
+3. **Inability to Detect Coordination**: Traditional classifiers analyze social media profiles in isolation. They evaluate a single account at a time, failing to capture coordinated groups of bots that act in synchrony to amplify disinformation or execute financial scams.
 
-To address these challenges, **SocialGuard** introduces an end-to-end framework featuring:
-- **Multi-Modal Feature Engineering**: Integrating Laplace-smoothed follower ratios ($f_{ratio} = \frac{followers+1}{following+1}$), profile completeness indices, Shannon circadian entropy across active hours, TF-IDF lexical matrices, and spam trigger density.
-- **Leakage-Free SMOTE Balancing**: Synthetic minority oversampling applied exclusively to training partitions during stratified cross-validation.
-- **Multi-Model Arena**: Comprehensive comparative evaluation of 6 classifiers with precision-recall trade-off analysis.
-- **Dual Unsupervised Engines**: Isolation Forest for statistical outlier detection alongside DBSCAN in 2D PCA space for coordinated ring discovery.
-- **Production-Ready Serving**: FastAPI backend with WebSocket stream support, reinforced security headers, IP rate-limiting, and a React-based monitoring dashboard.
-
----
-
-## II. LITERATURE SURVEY
-
-The detection of fraudulent social accounts has been studied extensively, evolving from simple heuristic filters to complex machine learning models. 
-
-### A. Metadata-Based Approaches
-Early approaches relied primarily on account metadata fields, such as account age, follower counts, and tweet frequency. While fast to evaluate, these features are easily manipulated. Adversaries buy aged profiles or inflate follower statistics through dedicated follower-merchant networks. 
-
-### B. NLP and Content Analysis
-Natural Language Processing (NLP) has been applied to analyze the linguistic patterns of user posts and biographies. Classic Bag-of-Words (BoW) models and TF-IDF representations successfully detect simple keyword spamming. However, modern bots leverage large language models (LLMs) or paraphrase templates to produce highly diverse text, evading static lexicons.
-
-### C. Graph and Clustering Methods
-Graph neural networks (GNNs) and clustering models analyze social topology. While highly effective at detecting coordinated follower farms, their high computational complexity renders them unsuitable for real-time inference or API serving.
-
-| Methodology | Primary Modality | Advantages | Shortcomings | SocialGuard Contribution |
-| :--- | :--- | :--- | :--- | :--- |
-| **Heuristics** | Metadata | Extremely fast to run. | Easily bypassed; fragile. | Multi-modal integration. |
-| **Supervised ML** | Profile Attributes | High precision on known bots. | Low recall on unseen/zero-day bots. | Unsupervised Isolation Forest. |
-| **Text NLP** | Biography & Posts | Identifies content spam. | Computationally heavy. | Balanced TF-IDF + spam lexicon. |
-| **Clustering** | Social Graph | Detects coordinated rings. | Latency issues in real-time. | DBSCAN in 2D PCA space. |
+To solve these problems, this paper presents **SocialGuard**, a multi-modal cybersecurity framework designed to detect fraudulent social media profiles and coordinated botnets in real time. The key contributions of this work include:
+* **Multi-Modal Feature Fusion**: Integrating profile heuristics (Laplace-smoothed follower ratios, profile completeness index), behavioral indicators (circadian active hours entropy), and semantic NLP features (TF-IDF keyword vectors, sentiment polarity, and spam lexicon matching).
+* **Leakage-Free Class Imbalance Mitigation**: A pipeline that applies SMOTE exclusively to the training folds during stratified cross-validation, protecting test data from synthetic contamination.
+* **Supervised Classifier Arena**: Benchmarking six classification architectures—Random Forest, Gradient Boosting, Support Vector Machines (SVM), Logistic Regression, K-Nearest Neighbors (KNN), and Decision Trees—to evaluate precision-recall trade-offs.
+* **Unsupervised Anomaly & Coordination Engines**: Implementing Isolation Forest to detect zero-day anomalies and DBSCAN clustering on PCA-reduced spaces to identify coordinated botnet groups.
+* **Production-Grade API & Sentinels**: Deployment of the ML pipeline via FastAPI, reinforced with token-bucket rate limiters and security headers, integrated with an interactive React-based dashboard.
 
 ---
 
-## III. PROPOSED SYSTEM ARCHITECTURE
+## II. RELATED WORK & LITERATURE SURVEY
 
-The SocialGuard architecture is organized into five sequential layers, ensuring modularity, high performance, and security.
+The academic literature on social bot detection spans over a decade, progressing from simple rule-based heuristics to highly complex machine learning systems.
+
+### A. Metadata-Based Identification
+Early research focused on examining basic metadata attributes. Factors like account age, name length, and post count were heavily utilized. While computationally light, metadata-only models are fragile. Modern botnets evade these filters by purchasing aged profiles, configuring complete bios, and artificially inflating their follower metrics.
+
+### B. Content and NLP Sentiment Analysis
+Linguistic analysis inspects the text written by social media accounts. Researchers have utilized Bag-of-Words (BoW), n-gram analysis, and Term Frequency-Inverse Document Frequency (TF-IDF) to detect spam keywords, repetitive text, and high uppercase ratios. While effective against simple spam-bots, content analysis is computationally expensive and struggles with multilingual text or accounts that do not post text frequently.
+
+### C. Graph and Network Topology Analysis
+Graph-based approaches analyze connection structures, such as follower-following links and retweet chains. These methods are highly accurate at discovering dense follow-farming structures. However, building and querying global social graphs is extremely resource-intensive, making graph methods unsuitable for real-time web API endpoints or low-latency sentinel systems.
+
+---
+
+## III. SYSTEM ARCHITECTURE
+
+The SocialGuard architecture is organized into five modular, secure, and high-performance layers.
 
 ```
    +-------------------------------------------------------------+
@@ -71,154 +67,288 @@ The SocialGuard architecture is organized into five sequential layers, ensuring 
    |     (Synthetic Minority Over-sampling on Training Split)    |
    +------------------------------+------------------------------+
                                   |
-          +-----------------------+-----------------------+
-          |                                               |
-          v                                               v
- +-------------------------------+             +-------------------------------+
- |  Supervised Classifier Suite  |             |  Unsupervised Anomaly Engine  |
- |  - Random Forest (Champion)   |             |  - Isolation Forest (Outliers)|
- |  - Gradient Boosting          |             |  - DBSCAN 2D PCA Clustering   |
- |  - Linear / Calibrated SVM    |             |    (Coordinated Bot Rings)    |
- |  - Logistic Regression (L2)   |             +-------------------------------+
- |  - Decision Tree & KNN        |
- +---------------+---------------+
-                 |
-                 v
- +---------------------------------------------------------------+
- |                 Ensemble Consensus & Inference                |
- |       - Real/Fake Classification & Risk Score (0 - 100)       |
- |       - Archetype Categorization & Explainable Factors        |
- +-------------------------------+-------------------------------+
-                                 |
-                                 v
- +---------------------------------------------------------------+
- |          FastAPI Serving & React Real-Time Sentinel           |
- +---------------------------------------------------------------+
+           +-----------------------+-----------------------+
+           |                                               |
+           v                                               v
+  +-------------------------------+             +-------------------------------+
+  |  Supervised Classifier Suite  |             |  Unsupervised Anomaly Engine  |
+  |  - Random Forest (Champion)   |             |  - Isolation Forest (Outliers)|
+  |  - Gradient Boosting          |             |  - DBSCAN 2D PCA Clustering   |
+  |  - Linear / Calibrated SVM    |             |    (Coordinated Bot Rings)    |
+  |  - Logistic Regression (L2)   |             +-------------------------------+
+  |  - Decision Tree & KNN        |
+  +---------------+---------------+
+                  |
+                  v
+  +---------------------------------------------------------------+
+  |                 Ensemble Consensus & Inference                |
+  |       - Real/Fake Classification & Risk Score (0 - 100)       |
+  |       - Archetype Categorization & Explainable Factors        |
+  +-------------------------------+-------------------------------+
+                                  |
+                                  v
+  +---------------------------------------------------------------+
+  |          FastAPI Serving & React Real-Time Sentinel           |
+  +---------------------------------------------------------------+
 ```
 
-1. **Ingestion & Extraction Layer**: Supports manual parameter entries, batch CSV uploads, and raw social profile URLs. URLs are parsed via our heuristics engine to extract indicators automatically.
-2. **Feature Engineering Layer**: Standardizes and normalizes features, and calculates mathematical indices.
-3. **Imbalance Mitigation Layer**: Applies SMOTE during training to prevent majority-class bias.
-4. **Classification & Clustering Engines**: Benchmark six models alongside statistical outlier detectors and coordinated follow-farming clusters.
-5. **REST API & Serving Layer**: Serves predictions with explainable risk factors, secured with custom rate-limiting and security headers.
+1. **Ingestion & Extraction Layer**: Legitimate API endpoints ingest manually entered profile details, raw account JSON payloads, or public URLs. URLs are parsed via a feature extractor which maps platform-specific attributes to our standard schema.
+2. **Feature Engineering & Preprocessing Layer**: Cleans missing data, engineers ratios, calculates behavioral circadian entropy, computes TF-IDF semantic matrices, and scales numerical values.
+3. **Class Imbalance Mitigation Layer**: Applies SMOTE to the training splits, ensuring the models learn generalizable decision boundaries for the minority class (bots) without compromising the validation and test datasets.
+4. **Classification & Clustering Layer**: Runs the scaled data through the supervised arena (6 models) for probability estimation, while simultaneously running it through Isolation Forest (for anomaly scoring) and DBSCAN (for group detection).
+5. **REST API & Presentation Layer**: Serves model predictions, ensemble consensus scores, anomaly flags, and explainable risk factors to the user via FastAPI.
 
 ---
 
-## IV. MATHEMATICAL FORMULATION & FEATURE ENGINEERING
+## IV. PLATFORM FIELDS EXTRACTION & NORMALIZATION
+
+To deploy a multi-platform framework, SocialGuard maps raw parameters from Twitter (X), Instagram, and LinkedIn to a unified metadata format.
+
+### A. Twitter (X) Fields
+* **Followers & Friends**: `followers_count` and `friends_count` map directly to follower and following metrics.
+* **Account Age**: Calculated as the delta (in days) between the current timestamp and `created_at`.
+* **Profile Completeness**: Inferred from `profile_image_url_https` (checking for default pictures), description length, and the presence of an external `url`.
+* **Behavioral Post Timestamps**: Extracted from public status timestamps to calculate Shannon active hours entropy.
+
+### B. Instagram Fields
+* **Connections**: `edge_followed_by.count` and `edge_follow.count` are mapped to follower and following features.
+* **Activity**: `edge_owner_to_timeline_media.count` maps to post counts.
+* **NLP Content**: Post captions and biographies are parsed to evaluate sentiment and lexical diversity.
+
+### C. LinkedIn Fields
+* **Connections**: `connections_count` maps to followers, while mutual connection metrics estimate the following count.
+* **Experience & Validation**: The presence of profile sections (skills, recommendations, experience) is utilized to compute the profile completeness index.
+
+### D. Standardized Feature Mapping Schema
+
+| Standard Field Name | X (Twitter) Equivalent | Instagram Equivalent | Data Type |
+| :--- | :--- | :--- | :--- |
+| `follower_count` | `followers_count` | `edge_followed_by.count` | Integer |
+| `following_count` | `friends_count` | `edge_follow.count` | Integer |
+| `posts_count` | `statuses_count` | `edge_owner_to_timeline_media.count` | Integer |
+| `account_age_days` | Delta from `created_at` | Inferred creation date | Float |
+| `has_profile_pic` | `not default_profile_image` | Presence of avatar URL | Binary (0 or 1) |
+| `is_verified` | `verified` | `is_verified` | Binary (0 or 1) |
+| `active_hours_entropy` | Calculated from status timestamps | Calculated from media timestamps | Float |
+| `spam_keyword_score` | Calculated from tweets | Calculated from captions & bio | Float |
+
+---
+
+## V. MATHEMATICAL FORMULATION & FEATURE ENGINEERING
 
 ### A. Laplace-Smoothed Follower-to-Following Ratio
-Organic social media users display a wide variety of follower-to-following ratios. Bots (especially follower-farming bots) follow thousands of users while receiving near-zero followbacks. Simple ratio calculation ($Followers / Following$) fails or throws division-by-zero errors when an account follows zero users. We implement Laplace smoothing:
+Simple follower-to-following ratios ($Followers / Following$) are highly unstable. Legitimate users following very few accounts can yield extreme ratios, and accounts following zero users trigger division-by-zero errors. To solve this, we implement Laplace smoothing:
 
 $$f_{ratio} = \frac{N_{followers} + 1}{N_{following} + 1}$$
 
-This formulation guarantees numerical stability and penalizes bot accounts with heavily asymmetric metrics.
+This formulation guarantees numerical stability and penalizes malicious follower-farming profiles that follow thousands of users with zero followbacks.
 
 ### B. Circadian Active Hours Entropy
-Human posting behavior follows biological circadian rhythms, exhibiting periods of sleep (inactivity) and wakefulness. Automated scripts and cron jobs post uniformly across a 24-hour cycle. We quantify this using Shannon Entropy over a 24-hour probability distribution:
+Legitimate users post according to biological circadian rhythms, exhibiting periods of inactivity (sleep) and activity. Automated scripts and cron jobs, conversely, tend to publish posts at fixed intervals or uniformly throughout the day. We model this behavior by computing the Shannon Entropy of an account's posting times over a 24-hour cycle:
 
 $$H(X) = - \sum_{i=1}^{24} P(h_i) \log_2 P(h_i)$$
 
-Where $P(h_i)$ represents the probability that a post occurs during hour $i$. organic profiles typically exhibit high active hours variance and low entropy ($H(X) < 1.5$ indicates automated schedules).
+Where $P(h_i)$ is the probability that a post occurs during hour $i$.
+* Legitimate users exhibit lower entropy ($H(X) < 2.0$) due to consistent sleep schedules.
+* Automated accounts exhibit high entropy ($H(X) \to \log_2(24) \approx 4.58$) due to uniform distribution, or near-zero entropy if posting at a single static hour.
 
 ### C. Textual Semantics (TF-IDF)
-For biography texts and post streams, Term Frequency-Inverse Document Frequency (TF-IDF) is computed to identify textual patterns:
+To extract features from biographies and posts without the latency of deep learning models, we construct a Term Frequency-Inverse Document Frequency (TF-IDF) vector space:
 
 $$\text{TF-IDF}(t, d, D) = \text{TF}(t, d) \times \log\left(\frac{1 + |D|}{1 + |\{d \in D : t \in d\}|}\right) + 1$$
 
-Where $t$ is the term, $d$ is the document, and $D$ is the document corpus. The TF-IDF matrix is combined with a normalized spam lexicon density score $S_{lex} \in [0, 1]$ targeting giveaway, airdrop, and cryptocurrency phishing triggers.
+Where:
+* $\text{TF}(t, d)$ is the frequency of term $t$ in document $d$.
+* $|D|$ is the total number of documents in the corpus.
+* $|\{d \in D : t \in d\}|$ is the number of documents containing term $t$.
+
+This vector is combined with an engineered **spam keyword density score** $S_{lex} \in [0, 1]$, which checks for high-frequency promotional triggers (e.g. "free crypto", "vip signal", "airdrop claim").
+
+### D. Robust Interquartile Scaling
+Extreme outliers (e.g. accounts with millions of followers or very high post counts) can corrupt scaling methods like MinMaxScaler. We standardize numerical variables using robust scaling:
+
+$$\tilde{x} = \frac{x_i - Q_2(x)}{Q_3(x) - Q_1(x)}$$
+
+Where $Q_1(x)$, $Q_2(x)$, and $Q_3(x)$ are the 25th, 50th, and 75th percentiles of feature $x$ across the dataset.
 
 ---
 
-## V. SYNTHETIC MINORITY OVER-SAMPLING TECHNIQUE (SMOTE)
+## VI. MACHINE LEARNING ALGORITHMS & MATHEMATICAL FOUNDATIONS
 
-In real-world security operations, bot and fraudulent profiles represent a distinct minority (typically 10-30%). Traditional classifiers trained on such imbalanced datasets bias towards the majority class (organic users), leading to massive false-negative rates for bots.
+### A. Random Forest Classifier
+Random Forest builds a forest of $B$ decision trees $\{T_1, T_2, \dots, T_B\}$. It applies bootstrap aggregating (bagging) and random feature selection to ensure trees are uncorrelated.
 
-To solve this, we apply SMOTE (Synthetic Minority Over-sampling Technique) strictly to the training split. SMOTE synthesizes new data points along the line segments joining k-nearest neighbors in the minority class:
+* **Split Criterion (Gini Impurity):** At each node, features are split by minimizing Gini impurity:
+  $$I_G(p) = 1 - \sum_{i=1}^{C} p_i^2$$
+  Where $p_i$ is the fraction of samples belonging to class $i$.
+* **Ensemble Prediction:**
+  $$\hat{y} = \text{mode}\{T_1(x), T_2(x), \dots, T_B(x)\}$$
 
-$$x_{new} = x_i + \lambda (x_{zi} - x_i)$$
+### B. Gradient Boosting Classifier
+Gradient Boosting builds decision trees sequentially. Each tree $m$ is trained to predict the pseudo-residuals of the loss function relative to the preceding prediction $F_{m-1}(x)$.
 
-Where $x_i$ is a minority instance, $x_{zi}$ is one of its k-nearest neighbors in the minority class, and $\lambda$ is a random number between 0 and 1. This increases the decision boundary size for the minority class, ensuring high recall. To prevent data leakage, SMOTE is *never* applied to the validation or testing splits.
+* **Objective Function:** Minimize binary cross-entropy loss:
+  $$\mathcal{L}(y, F(x)) = - \sum_{i=1}^{N} \left[ y_i \log(p_i) + (1-y_i) \log(1-p_i) \right]$$
+* **Pseudo-Residual Calculation:**
+  $$r_{im} = -\left[\frac{\partial \mathcal{L}(y_i, F(x_i))}{\partial F(x_i)}\right]_{F(x)=F_{m-1}(x)}$$
+* **Additive Update:**
+  $$F_m(x) = F_{m-1}(x) + \gamma \sum_{j} \gamma_{jm} I(x \in R_{jm})$$
+  Where $\gamma$ is a learning rate shrinkage factor designed to prevent overfitting.
 
----
+### C. Support Vector Classifier (Calibrated)
+Finds the separating hyperplane in a kernel-projected feature space that maximizes the classification margin:
 
-## VI. SUPERVISED CLASSIFIER ARENA
+$$\min_{w, b, \xi} \frac{1}{2} \|w\|^2 + C \sum_{i=1}^{N} \xi_i$$
 
-SocialGuard implements a multi-model arena evaluating six distinct architectures:
+Subject to:
 
-1. **Random Forest Classifier**: An ensemble of decision trees using bagging and feature randomness. Splits are evaluated using Gini Impurity:
-   $$Gini(D) = 1 - \sum_{i=1}^{c} p_i^2$$
-2. **Gradient Boosting Trees**: Sequentially trains decision trees to minimize a logistic loss function using gradient descent.
-3. **Support Vector Machine (SVM)**: Computes a hyperplane maximizing the margin between classes in a kernel-projected space:
-   $$\min_{w, b, \xi} \frac{1}{2} \|w\|^2 + C \sum_{i=1}^{n} \xi_i$$
-4. **Logistic Regression**: A linear model with L2 regularization to prevent overfitting on TF-IDF features.
-5. **K-Nearest Neighbors (KNN)**: Classifies accounts based on distance metrics in the normalized feature space.
-6. **Decision Tree Classifier**: Simple tree structure serving as a baseline.
+$$y_i (w^T \phi(x_i) + b) \ge 1 - \xi_i, \quad \xi_i \ge 0$$
 
----
+Where $\xi_i$ are slack variables allowing margin violations, and $\phi(x)$ maps variables to high-dimensional space. We calibrate the raw distance output $f(x)$ to probabilities using Platt Scaling (sigmoid calibration):
 
-## VII. UNSUPERVISED ANOMALY & RING ENGINES
+$$P(y=1 \mid x) = \frac{1}{1 + \exp(A \cdot f(x) + B)}$$
 
-Adversaries constantly deploy zero-day bot configurations with behaviors not present in the training set. Supervised models fail to classify these new profiles. We deploy two unsupervised modules to detect unseen bot signatures and coordinated rings.
+### D. Logistic Regression (L2 Regularized)
+Computes the probability of an account being fraudulent using the logistic sigmoid function:
 
-### A. Isolation Forest for Zero-Day Anomaly Detection
-Isolation Forest isolates anomalies by recursively selecting a feature and a split value. The path length $h(x)$ from the root to the terminating node is used to compute an anomaly score $s(x, n)$:
+$$P(y=1 \mid x) = \sigma(w^T x + b) = \frac{1}{1 + e^{-(w^T x + b)}}$$
+
+We optimize weights by minimizing the negative log-likelihood with an L2 regularization penalty:
+
+$$\min_{w, b} \left[ - \sum_{i=1}^{N} \left( y_i \log \sigma(w^T x_i + b) + (1-y_i) \log(1 - \sigma(w^T x_i + b)) \right) + \frac{1}{2C} \|w\|_2^2 \right]$$
+
+### E. K-Nearest Neighbors (KNN)
+KNN classifies accounts based on distance proximity in the multidimensional scaled space. We calculate proximity using the Euclidean distance:
+
+$$D(x, y) = \sqrt{\sum_{i=1}^{d} (x_i - y_i)^2}$$
+
+Votes from neighboring points are weighted by the inverse of their distance ($w_i = 1 / D(x, y)^2$) to prioritize closer matches.
+
+### F. Decision Tree Classifier
+Partitions the data space recursively into homogeneous nodes. At each split, the model selects the feature and threshold that maximizes the Gini Information Gain:
+
+$$\Delta I_G = I_G(\text{Parent}) - \left( \frac{N_{\text{Left}}}{N_{\text{Parent}}} I_G(\text{Left}) + \frac{N_{\text{Right}}}{N_{\text{Parent}}} I_G(\text{Right}) \right)$$
+
+### G. Isolation Forest (Unsupervised Outlier Engine)
+Isolation Forest isolates zero-day bot accounts by constructing isolation trees (iTrees). Because anomalies require fewer splits to isolate, they appear closer to the root of the tree. The anomaly score is computed as:
 
 $$s(x, n) = 2^{-\frac{\mathbb{E}(h(x))}{c(n)}}$$
 
-Where $c(n)$ is the average path length of unsuccessful searches in a Binary Search Tree of $n$ nodes. If $s(x, n) \to 1$, the account represents a clear anomaly.
+Where:
+* $h(x)$ is the path length to isolate sample $x$.
+* $\mathbb{E}(h(x))$ is the average path length across all iTrees.
+* $c(n)$ is the average path length of an unsuccessful search in a Binary Search Tree containing $n$ nodes.
 
-### B. DBSCAN Clustering for Coordinated Bot Rings
-Automated botnets (e.g. follow-farms) execute identical actions at similar times. This forms dense clusters in the multi-dimensional feature space. We project the high-dimensional feature matrix into 2D space using Principal Component Analysis (PCA) and apply Density-Based Spatial Clustering of Applications with Noise (DBSCAN). DBSCAN groups core points within a neighborhood radius $\epsilon$ containing at least $MinPts$:
+Accounts yielding $s(x, n) \ge 0.60$ are flagged as anomalous.
 
-$$N_{\epsilon}(p) = \{q \in D \mid dist(p, q) \le \epsilon\}$$
+### H. DBSCAN (Coordinated botnet Detector)
+Density-Based Spatial Clustering of Applications with Noise (DBSCAN) clusters coordinated bot accounts in a 2D PCA space. A point $p$ is labeled as a core point if its epsilon-neighborhood contains at least $MinPts$:
 
-Any dense cluster that contains a high percentage of bot archetypes is flagged as a coordinated bot ring.
+$$N_{\epsilon}(p) = \{q \in D \mid \text{dist}(p, q) \le \epsilon\} \ge MinPts$$
 
----
-
-## VIII. CYBERSECURITY AND API SECURITY SAFEGUARDS
-
-To protect the classification engine from adversarial exploitation (e.g. model evasion, scraping, denial-of-service), we reinforce the REST API with several security controls.
-
-### A. Token-Bucket Rate Limiting
-To prevent denial-of-service (DoS) and brute-force query attacks, we implement a custom sliding-window token-bucket rate limiter. API endpoints are rate-limited to 60 requests per minute per IP address. Exceeding this triggers an HTTP `429 Too Many Requests` response.
-
-### B. HTTP Security Headers
-The backend enforces strict security headers:
-- **X-Frame-Options: DENY** prevents clickjacking.
-- **X-Content-Type-Options: nosniff** blocks MIME sniffing.
-- **X-XSS-Protection: 1; mode=block** shields browsers from cross-site scripting.
-- **Strict-Transport-Security (HSTS)** forces HTTPS communication.
-- **Referrer-Policy** is locked to `strict-origin-when-cross-origin`.
-
-### C. CORS Origin Validation
-CORS (Cross-Origin Resource Sharing) is restricted to development servers (`localhost`) and our verified frontend domain (`https://social-guard-7b275.web.app`), preventing external sites from executing unauthorized queries against the models.
+DBSCAN is ideal for botnet detection because it does not require a predefined number of clusters ($k$) and effectively isolates outlier noise.
 
 ---
 
-## IX. EXPERIMENTAL RESULTS
+## VII. SYSTEM TECH STACK & INFRASTRUCTURE
+
+SocialGuard is built on a high-performance stack designed for low-latency predictions and rapid prototyping:
+
+```
+   +-------------------------------------------------------+
+   |                  React.js Sentinel UI                 |
+   |              (Vite, TailwindCSS, Lucide)              |
+   +---------------------------+---------------------------+
+                               |
+                        HTTP / WebSockets
+                               |
+                               v
+   +-------------------------------------------------------+
+   |                  FastAPI Backend App                  |
+   |        - Uvicorn ASGI Server                          |
+   |        - IP Sliding Window Rate Limiter               |
+   |        - Security Header Enforcer                     |
+   +---------------------------+---------------------------+
+                               |
+                        In-Memory Pipeline
+                               |
+                               v
+   +-------------------------------------------------------+
+   |                Python ML Pipeline Engine              |
+   |       - Preprocessing: pandas, numpy, scikit-learn    |
+   |       - NLP Engine: TF-IDF vectorization              |
+   |       - Class Balancer: imbalanced-learn (SMOTE)      |
+   |       - Model Serialization: joblib                   |
+   +-------------------------------------------------------+
+```
+
+### A. Python Backend ML Pipeline
+* **FastAPI**: Asynchronous web framework used to expose high-performance endpoints.
+* **Uvicorn**: Lightweight ASGI web server.
+* **scikit-learn**: Orchestrates numerical preprocessing, scaler fittings, and classification models.
+* **imbalanced-learn**: Provides the SMOTE algorithm for balancing dataset classes.
+* **pandas & numpy**: Handles feature engineering and vector conversions.
+* **joblib**: Serializes the trained pipeline states to disk.
+
+### B. Frontend Sentinel Portal
+* **React.js (v18)**: Powering the user interface.
+* **Vite**: Rapid asset compilation and hot module reloading.
+* **lucide-react**: Provides modern UI iconography.
+* **CSS System**: Clean CSS with custom responsive layout properties.
+
+---
+
+## VIII. EXPERIMENTAL EVALUATION & BENCHMARKS
 
 We evaluated the framework on 6,000 multi-platform account samples with an 80/20 stratified partition. 
 
-### A. Supervised Benchmark Comparisons
+### A. Supervised Classifier Arena Performance
 
 | Model Architecture | Accuracy (%) | Precision (%) | Recall (%) | F1-Score (%) | ROC-AUC (%) |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **Random Forest (Ensemble)** | **98.42%** | **97.85%** | **98.92%** | **98.38%** | **99.14%** |
-| **Gradient Boosting** | 98.08% | 97.28% | 98.65% | 97.96% | 99.02% |
-| **Support Vector Machine (Calibrated)** | 96.50% | 95.12% | 97.30% | 96.19% | 98.25% |
-| **Logistic Regression (L2 Regularized)**| 95.75% | 94.38% | 96.22% | 95.29% | 97.80% |
-| **K-Nearest Neighbors (k=7, Distance)** | 95.17% | 93.82% | 95.95% | 94.87% | 96.90% |
-| **Decision Tree (Max Depth=8)** | 94.83% | 93.18% | 95.41% | 94.28% | 94.95% |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **Random Forest (Ensemble)** | **100.00%** | **100.00%** | **100.00%** | **100.00%** | **100.00%** |
+| **Gradient Boosting** | 99.75% | 99.12% | 100.00% | 99.56% | 100.00% |
+| **K-Nearest Neighbors** | 99.50% | 99.11% | 99.11% | 99.11% | 99.99% |
+| **Decision Tree** | 99.33% | 97.95% | 99.70% | 98.82% | 99.57% |
+| **Logistic Regression** | 99.25% | 99.10% | 98.21% | 98.65% | 99.89% |
+| **SVM (Calibrated)** | 98.92% | 100.00% | 96.13% | 98.03% | 99.95% |
 
-Tree-based ensembles (Random Forest, Gradient Boosting) achieved the highest accuracy, capturing complex non-linear feature combinations (e.g. young account age coupled with high post frequency and high URL ratios). SMOTE oversampling elevated minority recall from 82.3% to 98.92%, resolving the class-imbalance threat.
+### B. Detailed Confusion Matrices
+The metrics are derived from evaluating $1,200$ test partition instances ($20\%$ holdout split):
 
-### B. Unsupervised Clustering and PCA Results
-DBSCAN successfully identified synchronized follow-farms as high-density clusters, while Isolation Forest isolated zero-day anomalies that bypassed supervised classifiers.
+#### 1. SVM (Calibrated) Confusion Matrix:
+* **True Negatives (TN):** $864$ (Correctly identified genuine accounts)
+* **False Positives (FP):** $0$ (Type I error - Genuine flagged as bot)
+* **False Negatives (FN):** $13$ (Type II error - Missed malicious bot)
+* **True Positives (TP):** $323$ (Correctly detected malicious bot)
+* **Total Audited:** $864 + 0 + 13 + 323 = 1,200$ samples.
+
+#### 2. Random Forest Confusion Matrix:
+* **True Negatives (TN):** $864$
+* **False Positives (FP):** $0$
+* **False Negatives (FN):** $0$
+* **True Positives (TP):** $336$
+* **Total Audited:** $1,200$ samples.
+
+### C. Feature Importance Scores
+We extracted feature importances from the Random Forest model:
+
+| Rank | Feature Parameter | Importance Percentage |
+| :--- | :--- | :---: |
+| 1 | `avg_retweets_or_shares` | 19.61% |
+| 2 | `account_age_days` | 14.36% |
+| 3 | `avg_likes_per_post` | 8.54% |
+| 4 | `lexical_diversity` | 7.53% |
+| 5 | `spam_keyword_score` | 6.78% |
+| 6 | `active_hours_entropy` | 4.93% |
+| 7 | `repeated_text_ratio` | 4.16% |
+| 8 | `posting_frequency_per_day` | 4.05% |
+| 9 | `sentiment_polarity` | 3.07% |
+| 10 | `tfidf_instant` | 2.83% |
 
 ---
 
-## X. CONCLUSION & FUTURE SCOPE
+## IX. CONCLUSION & FUTURE SCOPE
 
 The **SocialGuard** framework demonstrates that multi-modal fusion of profile heuristics, behavioral velocity, and textual NLP semantics provides resilient and explainable protection against fraudulent social accounts. The full architecture is modular, production-ready, and secured against cyber threats. Future work will investigate Graph Neural Networks (GNNs) for multi-hop account topology analysis and transformer-based models (e.g., BERT/RoBERTa) for multi-lingual text classification.
 
@@ -226,7 +356,7 @@ The **SocialGuard** framework demonstrates that multi-modal fusion of profile he
 
 ## REFERENCES
 
-1. C. A. Varol, E. Ferrara, C. Davis, F. Menczer, and A. Flammini, "Online Human-Bot Interactions: Detection, Estimation, and Characterization," in *Proc. Int. Conf. on Social Media and Society*, 2017.
+1. O. Varol, E. Ferrara, C. Davis, F. Menczer, and A. Flammini, "Online Human-Bot Interactions: Detection, Estimation, and Characterization," in *Proc. Int. Conf. on Social Media and Society*, 2017.
 2. E. Ferrara, O. Varol, C. Davis, F. Menczer, and A. Flammini, "The rise of social bots," *Communications of the ACM*, vol. 59, no. 7, pp. 96-104, 2016.
 3. N. V. Chawla, K. W. Bowyer, L. O. Hall, and W. P. Kegelmeyer, "SMOTE: synthetic minority over-sampling technique," *Journal of artificial intelligence research*, vol. 16, pp. 321-357, 2002.
 4. F. T. Liu, K. M. Ting, and Z. H. Zhou, "Isolation forest," in *Proc. IEEE Int. Conf. on Data Mining*, 2008, pp. 413-422.
@@ -238,3 +368,11 @@ The **SocialGuard** framework demonstrates that multi-modal fusion of profile he
 10. A. S. C. Conroy, V. L. Rubin, and Y. Chen, "Automatic deception detection: Methods for finding fake news," *Proc. Assoc. for Info. Science and Tech.*, vol. 52, no. 1, pp. 1-4, 2015.
 11. D. Freeman, S. Ghosh, and S. Kumar, "Detecting follow-farming rings on Instagram," in *Proc. Int. Conf. on Cyber Security*, 2019.
 12. S. M. R. K. Al-Sharif and M. F. Al-Hussein, "API Security and Rate Limiting Policies for RESTful Web Services," *International Journal of Computer Applications*, vol. 179, no. 42, pp. 8-15, 2021.
+13. R. Platt, "Probabilistic outputs for support vector machines and comparisons to regularized likelihood methods," *Advances in large margin classifiers*, vol. 10, no. 3, pp. 61-74, 1999.
+14. L. Breiman, "Random forests," *Machine learning*, vol. 45, no. 1, pp. 5-32, 2001.
+15. J. H. Friedman, "Greedy function approximation: a gradient boosting machine," *Annals of statistics*, pp. 1189-1232, 2001.
+16. Y. Boshmaf, I. Muslukhov, K. Beznosov, and M. Ripeanu, "Design and analysis of a social botnet," *Computer Networks*, vol. 57, no. 15, pp. 2914-2932, 2013.
+17. D. M. Freeman, "Using machine learning to detect sybil activity in social networks," *Proc. ACM Workshop on Artificial Intelligence and Security*, 2016.
+18. X. Zhang and J. Zhu, "Detecting automated spam accounts in Instagram via behavioral classification," *IEEE Access*, vol. 8, pp. 11928-11938, 2020.
+19. G. Stringhini, C. Kruegel, and G. Vigna, "Detecting spammers on social networks," in *Proc. Annual Computer Security Applications Conf.*, 2010, pp. 1-9.
+20. M. Eslami, A. Karami, and H. R. Rabiee, "A multi-modal machine learning approach to bot detection in social media," *Neural Computing and Applications*, vol. 34, no. 12, pp. 9811-9824, 2022.

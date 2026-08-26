@@ -22,6 +22,7 @@ from backend.ml.pipeline import SocialGuardPipeline, PIPELINE_PATH, DATA_DIR
 from backend.ml.dataset_generator import generate_socialguard_dataset
 from backend.ml.profile_extractor import ProfileFeatureExtractor
 from backend.api.schemas import AccountInputSchema, BatchAccountInputSchema, RetrainRequestSchema
+from backend.ml.preprocessor import DEFAULT_VALUES
 
 app = FastAPI(
     title="SocialGuard API",
@@ -180,8 +181,10 @@ def predict_batch_accounts(batch: BatchAccountInputSchema):
 async def upload_csv_and_predict(file: UploadFile = File(...)):
     """
     Uploads a CSV dataset file (e.g. from Kaggle/Twitter/Instagram),
-    parses columns, performs batch prediction, and returns enriched records.
+    parses columns, performs batch prediction, appends new rows to dataset.csv,
+    and automatically retrains the SocialGuard models.
     """
+    global pipeline
     if pipeline is None or not pipeline.is_trained:
         raise HTTPException(status_code=503, detail="SocialGuard pipeline is still initializing.")
     
@@ -193,21 +196,62 @@ async def upload_csv_and_predict(file: UploadFile = File(...)):
         df.columns = [c.strip().lower() for c in df.columns]
         
         records = df.to_dict(orient="records")
-        # Predict first 200 records max for fast interactive browser response
-        records_to_process = records[:200]
         
         results = []
         fake_count = 0
         total_risk = 0.0
 
-        for r in records_to_process:
+        aligned_rows = []
+        for index, r in enumerate(records):
+            # 1. Predict record to get is_fake label if not already present
             res = pipeline.predict_account(r)
-            if res["is_fake"] == 1:
-                fake_count += 1
-            total_risk += res["risk_score"]
-            results.append(res)
+            
+            # Keep predictions for the frontend response (limit to 200)
+            if index < 200:
+                if res["is_fake"] == 1:
+                    fake_count += 1
+                total_risk += res["risk_score"]
+                results.append(res)
+            
+            # 2. Align record to dataset.csv schema for retraining
+            aligned_row = {}
+            is_fake = int(r.get("is_fake", res["is_fake"]))
+            aligned_row["is_fake"] = is_fake
+            aligned_row["account_id"] = r.get("account_id", f"UPLOAD_{int(time.time())}_{index}")
+            aligned_row["full_name"] = r.get("full_name", r.get("username", f"User {index}"))
+            aligned_row["bot_archetype"] = r.get("bot_archetype", "Uploaded-Bot" if is_fake == 1 else "Uploaded-Genuine")
+            
+            # Fill default values for all standard preprocessed features
+            for col, def_val in DEFAULT_VALUES.items():
+                aligned_row[col] = r.get(col, def_val)
+                
+            # Calculated ratios
+            fol = float(aligned_row.get("follower_count", 0))
+            folg = float(aligned_row.get("following_count", 1))
+            aligned_row["follower_to_following_ratio"] = round((fol + 1.0) / (folg + 1.0), 3)
+            
+            aligned_rows.append(aligned_row)
 
         n = len(results)
+        df_uploaded = pd.DataFrame(aligned_rows)
+        
+        # Load existing dataset and append
+        csv_path = os.path.join(DATA_DIR, "socialguard_dataset.csv")
+        if os.path.exists(csv_path):
+            df_existing = pd.read_csv(csv_path)
+            df_merged = pd.concat([df_existing, df_uploaded], ignore_index=True)
+        else:
+            df_merged = df_uploaded
+            
+        # Save updated dataset
+        df_merged.to_csv(csv_path, index=False)
+        
+        # Trigger dynamic auto-retraining on the updated dataset
+        print(f"[API] Auto-retraining SocialGuard pipeline with {len(df_merged)} total records...")
+        new_pipeline = SocialGuardPipeline()
+        new_pipeline.train_pipeline(df_merged)
+        pipeline = new_pipeline
+        
         return {
             "filename": file.filename,
             "total_records_processed": n,
@@ -215,10 +259,14 @@ async def upload_csv_and_predict(file: UploadFile = File(...)):
             "genuine_count": n - fake_count,
             "fraud_rate_pct": round((fake_count / n) * 100, 2) if n > 0 else 0.0,
             "average_risk_score": round(total_risk / n, 2) if n > 0 else 0.0,
-            "results": results
+            "results": results,
+            "stored_and_retrained": True,
+            "new_dataset_size": len(df_merged),
+            "updated_best_model": pipeline.model_suite.best_model_name
         }
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Failed to process CSV file: {str(e)}")
+        print(f"Failed to process and retrain: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Failed to process CSV file and retrain: {str(e)}")
 
 @app.get("/api/models/evaluation")
 def get_models_evaluation():

@@ -147,6 +147,25 @@ export default function BatchScanner() {
       {batchResult && (
         <div className="space-y-6 animate-fadeIn">
           
+          {batchResult.stored_and_retrained && (
+            <div className="glass-panel p-4 rounded-xl border border-cyan-500/35 bg-cyan-500/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-pulse">
+              <div className="flex items-center gap-3">
+                <span className="p-2 rounded-lg bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                  <ShieldCheck className="w-4 h-4" />
+                </span>
+                <div>
+                  <h4 className="text-xs font-bold text-slate-200">Dataset Updated & Pipeline Autotrained</h4>
+                  <p className="text-[10px] text-slate-400 mt-0.5">
+                    Newly audited records have been stored in <code className="text-cyan-300 font-mono text-[9px] bg-slate-900 px-1 rounded">socialguard_dataset.csv</code> (Total size: {batchResult.new_dataset_size.toLocaleString()} samples) and models are retrained.
+                  </p>
+                </div>
+              </div>
+              <span className="text-[10px] font-mono text-cyan-300 bg-cyan-900/30 px-2.5 py-1 border border-cyan-500/30 rounded self-start sm:self-auto">
+                Champion Model: {batchResult.updated_best_model}
+              </span>
+            </div>
+          )}
+
           {/* Summary Stat Cards */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <div className="glass-panel p-4 rounded-xl border border-slate-800">

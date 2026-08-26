@@ -71,6 +71,33 @@ BOT_SPAM_POSTS_SAMPLE = [
     "Check out my exclusive spicy photos and private stream here: https://t.me/free_leak_scam_xyz 🔞"
 ]
 
+# Neutral / ambiguous bios and posts used by BOTH classes to break TF-IDF separation
+NEUTRAL_BIOS = [
+    "Sharing thoughts on life, work, and everything in between.",
+    "Explorer. Learner. Occasional blogger. DMs open.",
+    "Just here to stay updated. Love sports and music.",
+    "Working on exciting projects. Follow for updates.",
+    "Entrepreneur | Investor | Connecting people with opportunities.",
+    "Content creator. Business inquiries: email in bio.",
+    "Passionate about growth, mindset, and connecting with great people.",
+    "Finance tips | Life hacks | Daily motivation 💡",
+    "Always learning something new. Currently focused on marketing & tech.",
+    "Building my brand one post at a time. Let's connect!"
+]
+
+NEUTRAL_POSTS = [
+    "Big things coming soon. Stay tuned! 👀",
+    "Working hard behind the scenes. Excited to share soon.",
+    "Great connections made this week. Grateful for this community.",
+    "Reminder: consistency is the key to long-term success.",
+    "Sometimes the best opportunities come from unexpected places.",
+    "New blog post is up! Check the link in my bio.",
+    "Loving the engagement lately — thank you all for the support!",
+    "Just wrapped up a long project. Time to celebrate small wins 🎉",
+    "Had a productive day. Progress > Perfection.",
+    "Interesting article on the future of AI — highly recommend a read."
+]
+
 BOT_ARCHETYPES = [
     "Crypto-Phishing-Bot",
     "Spam-Promoter-Bot",
@@ -87,6 +114,11 @@ GENUINE_ARCHETYPES = [
     "Genuine-Celebrity"
 ]
 
+def _add_noise(value: float, sigma: float, lo: float = 0.0, hi: float = 1.0) -> float:
+    """Add Gaussian noise to a value and clip to [lo, hi]."""
+    noisy = value + np.random.normal(0, sigma)
+    return round(float(np.clip(noisy, lo, hi)), 3)
+
 def generate_socialguard_dataset(num_samples: int = 6000, fake_ratio: float = 0.28) -> pd.DataFrame:
     """
     Generates a realistic dataset with multi-modal profile, behavioural, and textual features.
@@ -101,8 +133,17 @@ def generate_socialguard_dataset(num_samples: int = 6000, fake_ratio: float = 0.
     for i in range(num_genuine):
         archetype = random.choice(GENUINE_ARCHETYPES)
         username_base = random.choice(["alex", "sarah", "david", "elena", "marcus", "priya", "kevin", "chloe", "rachel", "liam", "zoe", "lucas", "maya"])
-        has_digits = random.random() < 0.35
-        username = f"{username_base}_{random.randint(10, 999)}" if has_digits else f"{username_base}_{random.choice(['dev', 'official', 'design', 'photo', 'life', 'studio'])}"
+        _u_roll = random.random()
+        if _u_roll < 0.35:
+            # 2-3 digit suffix (e.g. alex_42, sarah_812)
+            username = f"{username_base}_{random.randint(10, 999)}"
+        elif _u_roll < 0.55:
+            # 4-5 digit suffix — real users do this (birth year, short ID like 2001, 4821)
+            username = f"{username_base}_{random.randint(1000, 99999)}"
+        else:
+            # Word suffix (no digits)
+            username = f"{username_base}_{random.choice(['dev', 'official', 'design', 'photo', 'life', 'studio', 'real', 'hq', 'co'])}"
+
         
         full_name = f"{username_base.capitalize()} {random.choice(['Miller', 'Chen', 'Patel', 'Smith', 'Taylor', 'Garcia', 'Kovacs', 'Wong', 'Johnson', 'Davis'])}"
         
@@ -149,21 +190,65 @@ def generate_socialguard_dataset(num_samples: int = 6000, fake_ratio: float = 0.
         posting_frequency_per_day = max(0.02, posting_frequency_per_day)
         follower_to_following_ratio = round((follower_count + 1) / (following_count + 1), 3)
         
-        # Behavioural patterns
-        like_to_share_ratio = round(float(np.random.uniform(4.0, 18.0)), 2)
-        mention_count_avg = round(float(np.random.uniform(0.1, 1.2)), 2)
-        hashtag_count_avg = round(float(np.random.uniform(0.5, 3.5)), 2)
-        url_in_post_ratio = round(float(np.random.uniform(0.02, 0.25)), 2)
-        active_hours_entropy = round(float(np.random.uniform(2.8, 3.8)), 3)
-        
+        # Behavioural patterns — widened ranges to create class overlap
+        # ~40% of genuine accounts are "suspicious-looking" edge cases (hard negatives)
+        is_ambiguous_genuine = random.random() < 0.40
+
+        if is_ambiguous_genuine:
+            # Genuine account that looks a bit spammy (hard negatives)
+            like_to_share_ratio = round(float(np.random.uniform(1.5, 6.0)), 2)
+            mention_count_avg = round(float(np.random.uniform(1.0, 4.5)), 2)
+            hashtag_count_avg = round(float(np.random.uniform(3.0, 8.0)), 2)
+            url_in_post_ratio = round(float(np.random.uniform(0.15, 0.55)), 2)
+            active_hours_entropy = round(float(np.random.uniform(1.4, 3.2)), 3)
+            spam_keyword_score = round(float(np.random.uniform(0.10, 0.38)), 3)
+            lexical_diversity = round(float(np.random.uniform(0.52, 0.72)), 3)
+            repeated_text_ratio = round(float(np.random.uniform(0.12, 0.42)), 3)
+            uppercase_ratio = round(float(np.random.uniform(0.10, 0.28)), 3)
+        else:
+            like_to_share_ratio = round(float(np.random.uniform(4.0, 18.0)), 2)
+            mention_count_avg = round(float(np.random.uniform(0.1, 1.8)), 2)
+            hashtag_count_avg = round(float(np.random.uniform(0.5, 5.0)), 2)
+            url_in_post_ratio = round(float(np.random.uniform(0.02, 0.35)), 2)
+            active_hours_entropy = round(float(np.random.uniform(2.2, 3.8)), 3)
+            spam_keyword_score = round(float(np.random.uniform(0.0, 0.18)), 3)
+            lexical_diversity = round(float(np.random.uniform(0.62, 0.95)), 3)
+            repeated_text_ratio = round(float(np.random.uniform(0.0, 0.22)), 3)
+            uppercase_ratio = round(float(np.random.uniform(0.02, 0.18)), 3)
+
+        # Add per-feature Gaussian noise to all continuous signals
+        like_to_share_ratio  = max(0.1, _add_noise(like_to_share_ratio, 0.6, 0.1, 20.0))
+        mention_count_avg    = max(0.0, _add_noise(mention_count_avg, 0.3, 0.0, 10.0))
+        hashtag_count_avg    = max(0.0, _add_noise(hashtag_count_avg, 0.5, 0.0, 20.0))
+        url_in_post_ratio    = max(0.0, _add_noise(url_in_post_ratio, 0.05, 0.0, 1.0))
+        active_hours_entropy = max(0.0, _add_noise(active_hours_entropy, 0.25, 0.0, 4.0))
+        spam_keyword_score   = max(0.0, _add_noise(spam_keyword_score, 0.04, 0.0, 1.0))
+        lexical_diversity    = max(0.0, _add_noise(lexical_diversity, 0.04, 0.0, 1.0))
+        repeated_text_ratio  = max(0.0, _add_noise(repeated_text_ratio, 0.04, 0.0, 1.0))
+        uppercase_ratio      = max(0.0, _add_noise(uppercase_ratio, 0.03, 0.0, 1.0))
+
+        # Also add noise to key account-level features to break separability
+        posting_frequency_per_day = max(0.01, _add_noise(posting_frequency_per_day, 0.4, 0.01, 25.0))
+        account_age_days = max(5, int(_add_noise(float(account_age_days), 150.0, 5.0, 8000.0)))
+        avg_engagement_rate = max(0.1, _add_noise(avg_engagement_rate, 1.5, 0.1, 20.0))
+
         # Textual & NLP Signals
-        bio = random.choice(GENUINE_BIOS)
-        recent_post = random.choice(GENUINE_POSTS_SAMPLE)
-        spam_keyword_score = round(float(np.random.uniform(0.0, 0.12)), 3)
-        sentiment_polarity = round(float(np.random.uniform(-0.1, 0.75)), 3)
-        lexical_diversity = round(float(np.random.uniform(0.70, 0.95)), 3)
-        repeated_text_ratio = round(float(np.random.uniform(0.0, 0.15)), 3)
-        uppercase_ratio = round(float(np.random.uniform(0.02, 0.12)), 3)
+        # 20% use neutral bio, 5% use a spam post (hard negatives in text space)
+        _bio_roll = random.random()
+        if _bio_roll < 0.20:
+            bio = random.choice(NEUTRAL_BIOS)
+        else:
+            bio = random.choice(GENUINE_BIOS)
+
+        _post_roll = random.random()
+        if _post_roll < 0.05:
+            recent_post = random.choice(BOT_SPAM_POSTS_SAMPLE)   # confounding sample
+        elif _post_roll < 0.25:
+            recent_post = random.choice(NEUTRAL_POSTS)
+        else:
+            recent_post = random.choice(GENUINE_POSTS_SAMPLE)
+
+        sentiment_polarity = round(float(np.random.uniform(-0.15, 0.80)), 3)
         
         records.append({
             "account_id": f"GEN_{i+10001}",
@@ -203,17 +288,33 @@ def generate_socialguard_dataset(num_samples: int = 6000, fake_ratio: float = 0.
         archetype = random.choice(BOT_ARCHETYPES)
         
         if archetype == "Crypto-Phishing-Bot":
-            username = f"{random.choice(['elon', 'binance', 'crypto', 'support', 'airdrop'])}_{random.choice(['help', 'official', 'rewards', 'fast'])}_{random.randint(1000, 99999)}"
+            # 50% use 4+ digits (identifiable), 50% use short suffixes (ambiguous)
+            if random.random() < 0.50:
+                username = f"{random.choice(['elon', 'binance', 'crypto', 'support', 'airdrop'])}_{random.choice(['help', 'official', 'rewards', 'fast'])}_{random.randint(10, 999)}"
+            else:
+                username = f"{random.choice(['crypto', 'support', 'airdrop', 'official'])}_{random.choice(['help', 'desk', 'pro', 'vip', 'live'])}"
             full_name = f"{random.choice(['Elon Musk Support', 'Ethereum Rewards', 'Crypto Whale Airdrops', 'Binance Helpdesk'])}"
         elif archetype == "Follower-Farm-Bot":
-            username = f"user_{random.randint(1000000, 9999999)}"
-            full_name = f"User {random.randint(1000, 9999)}"
+            # Mix of suspicious long IDs and innocent-looking names
+            if random.random() < 0.50:
+                username = f"user_{random.randint(1000000, 9999999)}"
+            else:
+                username = f"{random.choice(['john', 'mike', 'anna', 'user', 'account'])}_{random.randint(10, 999)}"
+            full_name = f"User {random.randint(100, 999)}"
         elif archetype == "Spam-Promoter-Bot":
-            username = f"{random.choice(['promo', 'boost', 'viral', 'kings', 'growth'])}_{random.choice(['marketing', 'hub', 'agency'])}_{random.randint(100, 999)}"
+            if random.random() < 0.50:
+                username = f"{random.choice(['promo', 'boost', 'viral', 'kings', 'growth'])}_{random.choice(['marketing', 'hub', 'agency'])}_{random.randint(10, 999)}"
+            else:
+                username = f"{random.choice(['grow', 'boost', 'viral', 'social'])}_{random.choice(['hub', 'pro', 'co', 'hq'])}"
             full_name = f"Social Growth Agency #{random.randint(1, 99)}"
-        else:
-            username = f"{random.choice(['fast_cash', 'gift_giveaway', 'hot_deals', 'stream_leak'])}_{random.randint(100, 99999)}"
+        else:  # Impersonator / Automated-Content-Scraper
+            if random.random() < 0.50:
+                username = f"{random.choice(['fast_cash', 'gift_giveaway', 'hot_deals', 'stream_leak'])}_{random.randint(10, 999)}"
+            else:
+                ubase = random.choice(["james", "maria", "chris", "linda", "robert"])
+                username = f"{ubase}_{random.randint(10, 999)}" if random.random() < 0.4 else f"{ubase}_{random.choice(['real', 'official', 'here', 'hq'])}"
             full_name = f"Official Giveaways {random.choice(['VIP', 'Global', 'Direct'])}"
+
 
         # Profile signals
         has_profile_pic = 1 if random.random() < 0.65 else 0
@@ -251,21 +352,69 @@ def generate_socialguard_dataset(num_samples: int = 6000, fake_ratio: float = 0.
         avg_likes_per_post = round(follower_count * (avg_engagement_rate / 100.0) + random.uniform(0, 2), 1)
         avg_retweets_or_shares = round(avg_likes_per_post * random.uniform(0.01, 0.05), 1)
         
-        # Behavioural signals
-        like_to_share_ratio = round(float(np.random.uniform(0.5, 3.0)), 2)
-        mention_count_avg = round(float(np.random.uniform(2.5, 9.0)), 2)
-        hashtag_count_avg = round(float(np.random.uniform(6.0, 18.0)), 2)
-        url_in_post_ratio = round(float(np.random.uniform(0.65, 0.98)), 2)
-        active_hours_entropy = round(float(np.random.uniform(0.2, 1.6)), 3)
+        # Behavioural signals — widened ranges to create class overlap
+        # ~35% of bot accounts are "clean-looking" (hard positives — stealthy bots)
+        is_ambiguous_bot = random.random() < 0.35
+
+        if is_ambiguous_bot:
+            # Stealthy bot: mimics genuine posting frequency and engagement
+            like_to_share_ratio = round(float(np.random.uniform(2.5, 8.0)), 2)
+            mention_count_avg   = round(float(np.random.uniform(0.8, 3.5)), 2)
+            hashtag_count_avg   = round(float(np.random.uniform(2.0, 7.0)), 2)
+            url_in_post_ratio   = round(float(np.random.uniform(0.20, 0.60)), 2)
+            active_hours_entropy= round(float(np.random.uniform(1.2, 2.8)), 3)
+            spam_keyword_score  = round(float(np.random.uniform(0.12, 0.42)), 3)
+            lexical_diversity   = round(float(np.random.uniform(0.40, 0.68)), 3)
+            repeated_text_ratio = round(float(np.random.uniform(0.15, 0.48)), 3)
+            uppercase_ratio     = round(float(np.random.uniform(0.08, 0.28)), 3)
+            # Key: stealthy bots have human-like posting frequency and age
+            posting_frequency_per_day = round(float(np.random.uniform(0.3, 3.5)), 2)
+            account_age_days = int(np.random.uniform(90, 600))
+            avg_engagement_rate = round(float(np.random.uniform(1.0, 8.0)), 2)
+        else:
+            like_to_share_ratio = round(float(np.random.uniform(0.5, 4.5)), 2)
+            mention_count_avg   = round(float(np.random.uniform(2.0, 9.0)), 2)
+            hashtag_count_avg   = round(float(np.random.uniform(5.0, 18.0)), 2)
+            url_in_post_ratio   = round(float(np.random.uniform(0.50, 0.98)), 2)
+            active_hours_entropy= round(float(np.random.uniform(0.2, 2.0)), 3)
+            spam_keyword_score  = round(float(np.random.uniform(0.40, 0.98)), 3)
+            lexical_diversity   = round(float(np.random.uniform(0.22, 0.58)), 3)
+            repeated_text_ratio = round(float(np.random.uniform(0.38, 0.95)), 3)
+            uppercase_ratio     = round(float(np.random.uniform(0.18, 0.75)), 3)
+
+        # Add per-feature Gaussian noise
+        like_to_share_ratio  = max(0.1, _add_noise(like_to_share_ratio, 0.6, 0.1, 20.0))
+        mention_count_avg    = max(0.0, _add_noise(mention_count_avg, 0.4, 0.0, 10.0))
+        hashtag_count_avg    = max(0.0, _add_noise(hashtag_count_avg, 0.7, 0.0, 20.0))
+        url_in_post_ratio    = max(0.0, _add_noise(url_in_post_ratio, 0.06, 0.0, 1.0))
+        active_hours_entropy = max(0.0, _add_noise(active_hours_entropy, 0.25, 0.0, 4.0))
+        spam_keyword_score   = max(0.0, _add_noise(spam_keyword_score, 0.05, 0.0, 1.0))
+        lexical_diversity    = max(0.0, _add_noise(lexical_diversity, 0.05, 0.0, 1.0))
+        repeated_text_ratio  = max(0.0, _add_noise(repeated_text_ratio, 0.05, 0.0, 1.0))
+        uppercase_ratio      = max(0.0, _add_noise(uppercase_ratio, 0.04, 0.0, 1.0))
+
+        # Also add noise to key account-level features to break separability
+        posting_frequency_per_day = max(0.01, _add_noise(posting_frequency_per_day, 3.5, 0.01, 90.0))
+        account_age_days = max(1, int(_add_noise(float(account_age_days), 80.0, 1.0, 800.0)))
+        avg_engagement_rate = max(0.01, _add_noise(avg_engagement_rate, 1.0, 0.01, 15.0))
 
         # Textual & NLP Signals
-        bio = random.choice(BOT_SPAM_BIOS)
-        recent_post = random.choice(BOT_SPAM_POSTS_SAMPLE)
-        spam_keyword_score = round(float(np.random.uniform(0.55, 0.98)), 3)
-        sentiment_polarity = round(float(np.random.uniform(0.45, 0.95)), 3)
-        lexical_diversity = round(float(np.random.uniform(0.25, 0.55)), 3)
-        repeated_text_ratio = round(float(np.random.uniform(0.50, 0.95)), 3)
-        uppercase_ratio = round(float(np.random.uniform(0.25, 0.75)), 3)
+        # 20% use neutral bio, 5% use a genuine post (stealthy bots in text space)
+        _bio_roll = random.random()
+        if _bio_roll < 0.20:
+            bio = random.choice(NEUTRAL_BIOS)
+        else:
+            bio = random.choice(BOT_SPAM_BIOS)
+
+        _post_roll = random.random()
+        if _post_roll < 0.05:
+            recent_post = random.choice(GENUINE_POSTS_SAMPLE)    # confounding sample
+        elif _post_roll < 0.25:
+            recent_post = random.choice(NEUTRAL_POSTS)
+        else:
+            recent_post = random.choice(BOT_SPAM_POSTS_SAMPLE)
+
+        sentiment_polarity = round(float(np.random.uniform(0.35, 0.95)), 3)
 
         records.append({
             "account_id": f"BOT_{j+10001}",
