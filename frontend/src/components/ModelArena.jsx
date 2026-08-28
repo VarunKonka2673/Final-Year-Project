@@ -20,6 +20,7 @@ export default function ModelArena() {
   const [selectedModel, setSelectedModel] = useState(null);
   const detailRef = useRef(null);
   const tableRef = useRef(null);
+  const svmRef = useRef(null);
 
   const fetchEvaluation = async () => {
     setLoading(true);
@@ -43,9 +44,9 @@ export default function ModelArena() {
 
   const handleSelectModel = (modelName) => {
     setSelectedModel(modelName);
-    // Scroll to the deep-dive analysis section smoothly after selection.
+    // Scroll to the SVM (Calibrated) row smoothly after selection.
     setTimeout(() => {
-      detailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      svmRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }, 80);
   };
 
@@ -129,6 +130,7 @@ export default function ModelArena() {
                 return (
                   <tr
                     key={m.model_name}
+                    ref={m.model_name.toLowerCase().includes('svm') ? svmRef : null}
                     className={`transition-colors ${
                       isSelected ? 'bg-cyan-500/10 text-cyan-200' : 'hover:bg-slate-800/40 text-slate-300'
                     }`}
