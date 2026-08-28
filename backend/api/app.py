@@ -269,14 +269,23 @@ async def upload_csv_and_predict(file: UploadFile = File(...)):
         raise HTTPException(status_code=400, detail=f"Failed to process CSV file and retrain: {str(e)}")
 
 @app.get("/api/models/evaluation")
-def get_models_evaluation():
+def get_models_evaluation(retrain: bool = False):
     """
-    Returns comparative evaluation metrics across all 6 models:
-    Accuracy, Precision, Recall, F1-Score, ROC-AUC, Confusion Matrices, and Feature Importances.
+    Returns comparative evaluation metrics across all 6 models.
+    If `retrain` is true (or the pipeline is not yet trained), a fresh pipeline
+    is trained on a synthetic dataset and the latest evaluation metadata is
+    returned. This ensures the live service reflects actual computed values
+    rather than a static artifact.
     """
-    if pipeline is None or not pipeline.is_trained:
-        raise HTTPException(status_code=503, detail="Pipeline not ready.")
-    
+    global pipeline
+    # Retrain on demand or if no trained pipeline exists.
+    if pipeline is None or not pipeline.is_trained or retrain:
+        # Generate a modest synthetic dataset (500 samples, 5% fraud).
+        df_new = generate_socialguard_dataset(num_samples=500, fake_ratio=0.05)
+        pipeline = SocialGuardPipeline()
+        # Use the same SMOTE ratio that the retrain endpoint expects.
+        pipeline.imbalance_handler.sampling_strategy = 0.5
+        pipeline.train_pipeline(df_new)
     return pipeline.evaluation_metadata
 
 @app.get("/api/anomalies/clusters")
