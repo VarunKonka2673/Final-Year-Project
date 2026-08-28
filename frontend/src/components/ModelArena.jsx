@@ -43,10 +43,9 @@ export default function ModelArena() {
 
   const handleSelectModel = (modelName) => {
     setSelectedModel(modelName);
-    // Scroll so the bottom of the leaderboard table comes into view,
-    // revealing the metric cards just below without a jarring jump.
+    // Scroll to the deep-dive analysis section smoothly after selection.
     setTimeout(() => {
-      tableRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      detailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 80);
   };
 
