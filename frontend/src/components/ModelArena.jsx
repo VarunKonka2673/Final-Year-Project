@@ -63,8 +63,120 @@ export default function ModelArena() {
   const comparisonList = benchmarks?.models_comparison || [];
   const detailedMetrics = benchmarks?.detailed_metrics || {};
   const activeDetail = selectedModel ? (detailedMetrics[selectedModel] || null) : null;
-  const featureImportances = benchmarks?.feature_importances || [];
   const selectedSummary = comparisonList.find(m => m.model_name === selectedModel) || null;
+
+  // Read the last scanned account result from localStorage (populated from SingleScanner URL scan)
+  const getScannedResult = () => {
+    try {
+      const saved = localStorage.getItem('sg_result');
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch (e) {
+      console.error("Error reading scan result from localStorage", e);
+    }
+    return null;
+  };
+
+  const scannedResult = getScannedResult();
+  const scannedUsername = scannedResult?.account_username || null;
+  const extractedFeatures = scannedResult?.extracted_features || null;
+
+  const getDynamicFeatureImportances = (staticImportances) => {
+    if (!staticImportances || staticImportances.length === 0) return [];
+    if (!extractedFeatures) return staticImportances;
+
+    const dynamicList = staticImportances.map(item => {
+      const name = item.feature;
+      let factor = 1.0;
+
+      // Determine feature value
+      let v = 0.0;
+      if (extractedFeatures[name] !== undefined) {
+        v = parseFloat(extractedFeatures[name]) || 0.0;
+      }
+
+      // Adjust Gini importance multiplier based on value significance/risk level
+      if (name === 'follower_to_following_ratio') {
+        if (v < 0.2) factor = 2.0;
+        else if (v < 0.5) factor = 1.5;
+        else if (v > 2.0) factor = 0.4;
+      } 
+      else if (name === 'posting_frequency_per_day') {
+        if (v > 20) factor = 2.2;
+        else if (v > 5) factor = 1.6;
+        else if (v < 0.5) factor = 0.4;
+      }
+      else if (name === 'spam_keyword_score') {
+        if (v > 0.4) factor = 2.5;
+        else if (v > 0.15) factor = 1.8;
+        else factor = 0.3;
+      }
+      else if (name === 'active_hours_entropy') {
+        if (v < 1.0) factor = 2.0;
+        else if (v < 1.8) factor = 1.4;
+        else factor = 0.5;
+      }
+      else if (name === 'account_age_days') {
+        if (v < 30) factor = 2.0;
+        else if (v < 90) factor = 1.5;
+        else if (v > 730) factor = 0.3;
+      }
+      else if (name === 'profile_completeness_score') {
+        if (v < 0.3) factor = 1.8;
+        else if (v < 0.6) factor = 1.3;
+        else factor = 0.4;
+      }
+      else if (name === 'username_digit_count') {
+        if (v >= 4) factor = 1.8;
+        else if (v >= 2) factor = 1.3;
+        else factor = 0.5;
+      }
+      else if (name === 'repeated_text_ratio') {
+        if (v > 0.5) factor = 2.0;
+        else if (v > 0.2) factor = 1.4;
+        else factor = 0.3;
+      }
+      else if (name === 'uppercase_ratio') {
+        if (v > 0.6) factor = 1.6;
+        else factor = 0.7;
+      }
+      else if (name === 'is_verified') {
+        if (v === 1) factor = 0.2;
+        else factor = 1.1;
+      }
+      else if (name === 'has_profile_pic') {
+        if (v === 0) factor = 1.8;
+        else factor = 0.6;
+      }
+      else if (name === 'avg_engagement_rate') {
+        if (v === 0 || v > 50) factor = 1.5;
+        else factor = 0.6;
+      }
+
+      return {
+        feature: name,
+        importance_pct: item.importance_pct * factor,
+        raw_value: v
+      };
+    });
+
+    const originalSum = staticImportances.reduce((acc, x) => acc + x.importance_pct, 0);
+    const currentSum = dynamicList.reduce((acc, x) => acc + x.importance_pct, 0);
+    
+    if (currentSum > 0) {
+      const scale = originalSum / currentSum;
+      dynamicList.forEach(item => {
+        item.importance_pct = parseFloat((item.importance_pct * scale).toFixed(2));
+      });
+    }
+
+    dynamicList.sort((a, b) => b.importance_pct - a.importance_pct);
+    return dynamicList;
+  };
+
+  const staticImportances = benchmarks?.feature_importances || [];
+  const featureImportances = getDynamicFeatureImportances(staticImportances);
 
   return (
     <div className="space-y-8 animate-fadeIn">
@@ -355,9 +467,11 @@ export default function ModelArena() {
                 <div>
                   <h4 className="text-sm font-bold text-slate-200 flex items-center gap-2">
                     <SlidersHorizontal className="w-4 h-4 text-indigo-400" />
-                    Top Discriminative Feature Importances
+                    Top Discriminative Feature Importances {scannedUsername ? `(@${scannedUsername})` : ''}
                   </h4>
-                  <p className="text-[11px] text-slate-400 font-mono mt-0.5">Ensemble Gini Importance Ranking</p>
+                  <p className="text-[11px] text-slate-400 font-mono mt-0.5">
+                    {scannedUsername ? 'Dynamic Input-Weighted Feature Ranking' : 'Ensemble Gini Importance Ranking'}
+                  </p>
                 </div>
                 <span className="text-xs font-mono text-slate-400">Relative Weight (%)</span>
               </div>
