@@ -84,7 +84,7 @@ export default function ModelArena() {
 
   const getDynamicFeatureImportances = (staticImportances) => {
     if (!staticImportances || staticImportances.length === 0) return [];
-    if (!extractedFeatures) return staticImportances;
+    if (!extractedFeatures) return [];
 
     const dynamicList = staticImportances.map(item => {
       const name = item.feature;
@@ -477,22 +477,28 @@ export default function ModelArena() {
               </div>
 
               <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
-                {featureImportances.slice(0, 9).map((f, i) => (
-                  <div key={f.feature} className="space-y-1">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-mono text-slate-300 truncate max-w-[200px]">
-                        {i + 1}. {f.feature}
-                      </span>
-                      <span className="font-mono text-cyan-400 font-semibold">{f.importance_pct}%</span>
+                {featureImportances && featureImportances.length > 0 ? (
+                  featureImportances.slice(0, 9).map((f, i) => (
+                    <div key={f.feature} className="space-y-1">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-mono text-slate-300 truncate max-w-[200px]">
+                          {i + 1}. {f.feature}
+                        </span>
+                        <span className="font-mono text-cyan-400 font-semibold">{f.importance_pct}%</span>
+                      </div>
+                      <div className="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden">
+                        <div
+                          className="h-full bg-gradient-to-r from-cyan-400 to-indigo-500 rounded-full"
+                          style={{ width: `${Math.min(100, f.importance_pct * 3.5)}%` }}
+                        />
+                      </div>
                     </div>
-                    <div className="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden">
-                      <div
-                        className="h-full bg-gradient-to-r from-cyan-400 to-indigo-500 rounded-full"
-                        style={{ width: `${Math.min(100, f.importance_pct * 3.5)}%` }}
-                      />
-                    </div>
+                  ))
+                ) : (
+                  <div className="py-8 text-center text-xs font-mono text-slate-500 border border-dashed border-slate-800 rounded-xl">
+                    No profile analysis found. Run a scan in the Scanner tab to compute dynamic feature importances.
                   </div>
-                ))}
+                )}
               </div>
             </div>
 
