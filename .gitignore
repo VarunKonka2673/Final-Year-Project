@@ -22,7 +22,15 @@ pc-debug.log
 # Node/Frontend
 node_modules/
 dist/
+frontend/dist/
 .DS_Store
+frontend/.env
+.env
+.env.local
+
+# Tools & Temp
+tools/
+temp/
 
 # IDEs
 .vscode/

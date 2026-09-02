@@ -21,7 +21,7 @@ class SocialGuardAnomalyEngine:
             random_state=random_state,
             n_jobs=-1
         )
-        self.dbscan = DBSCAN(eps=1.8, min_samples=6)
+        self.dbscan = DBSCAN(eps=0.15, min_samples=6)
         self.pca = PCA(n_components=2, random_state=random_state)
         self.is_fitted = False
 
@@ -63,19 +63,27 @@ class SocialGuardAnomalyEngine:
         if not self.is_fitted:
             raise ValueError("Anomaly Engine has not been fitted.")
 
+        # Project the ENTIRE dataset to 2D PCA first
+        pca_all = self.pca.transform(X_scaled)
+        
+        # Fit and predict DBSCAN clusters on the 2D PCA projection of the ENTIRE dataset
+        dbscan_clusters_all = self.dbscan.fit_predict(pca_all)
+
         # Subsample for smooth web rendering
         if len(X_scaled) > max_points:
             indices = np.random.choice(len(X_scaled), size=max_points, replace=False)
             X_sub = X_scaled[indices]
             labels_sub = [labels[i] for i in indices]
             archetypes_sub = [archetypes[i] for i in indices]
+            pca_2d = pca_all[indices]
+            dbscan_clusters = dbscan_clusters_all[indices]
         else:
             X_sub = X_scaled
             labels_sub = labels
             archetypes_sub = archetypes
+            pca_2d = pca_all
+            dbscan_clusters = dbscan_clusters_all
 
-        pca_2d = self.pca.transform(X_sub)
-        dbscan_clusters = self.dbscan.fit_predict(X_sub)
         iso_preds = self.isolation_forest.predict(X_sub) # -1: anomaly, 1: normal
         iso_scores = self.isolation_forest.decision_function(X_sub)
 
