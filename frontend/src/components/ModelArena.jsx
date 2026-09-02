@@ -21,6 +21,7 @@ export default function ModelArena() {
   const detailRef = useRef(null);
   const tableRef = useRef(null);
   const svmRef = useRef(null);
+  const accuracyCardRef = useRef(null);
 
   const fetchEvaluation = async () => {
     setLoading(true);
@@ -44,9 +45,9 @@ export default function ModelArena() {
 
   const handleSelectModel = (modelName) => {
     setSelectedModel(modelName);
-    // Scroll to the SVM (Calibrated) row smoothly after selection.
+    // Scroll to the Accuracy metric card in the Deep-Dive analysis grid
     setTimeout(() => {
-      svmRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      accuracyCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }, 80);
   };
 
@@ -322,7 +323,10 @@ export default function ModelArena() {
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
 
             {/* Accuracy */}
-            <div className="glass-panel p-4 rounded-2xl border border-slate-800 flex flex-col gap-2 hover:border-emerald-500/40 transition-colors group">
+            <div 
+              ref={accuracyCardRef}
+              className="glass-panel p-4 rounded-2xl border border-slate-800 flex flex-col gap-2 hover:border-emerald-500/40 transition-colors group"
+            >
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400">Accuracy</span>
                 <Target className="w-4 h-4 text-emerald-400 group-hover:scale-110 transition-transform" />

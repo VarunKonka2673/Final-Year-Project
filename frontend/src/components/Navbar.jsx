@@ -7,7 +7,6 @@ import {
   FileSpreadsheet, 
   Radio, 
   Database, 
-  BookOpen, 
   Activity 
 } from 'lucide-react';
 
@@ -18,8 +17,7 @@ export default function Navbar({ activeTab, setActiveTab, apiStatus }) {
     { id: 'clusters', label: 'Bot Rings & Clusters', icon: Network, tag: 'DBSCAN' },
     { id: 'batch', label: 'Batch CSV Audit', icon: FileSpreadsheet, tag: 'Bulk' },
     { id: 'stream', label: 'Live Sentinel Feed', icon: Radio, tag: 'Stream' },
-    { id: 'dataset', label: 'Dataset Explorer', icon: Database, tag: '6K Samples' },
-    { id: 'paper', label: 'IEEE Research Paper', icon: BookOpen, tag: 'Docs' }
+    { id: 'dataset', label: 'Dataset Explorer', icon: Database, tag: '6K Samples' }
   ];
 
   return (

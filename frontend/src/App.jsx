@@ -6,7 +6,6 @@ import BotClusterVisualizer from './components/BotClusterVisualizer';
 import BatchScanner from './components/BatchScanner';
 import LiveSentinelStream from './components/LiveSentinelStream';
 import DatasetExplorer from './components/DatasetExplorer';
-import IEEEPaperViewer from './components/IEEEPaperViewer';
 import { ShieldCheck } from 'lucide-react';
 import { API_BASE } from './config';
 
@@ -46,7 +45,6 @@ export default function App() {
         {activeTab === 'batch' && <BatchScanner />}
         {activeTab === 'stream' && <LiveSentinelStream />}
         {activeTab === 'dataset' && <DatasetExplorer />}
-        {activeTab === 'paper' && <IEEEPaperViewer />}
       </main>
 
       {/* Footer */}

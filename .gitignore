@@ -31,6 +31,7 @@ frontend/.env
 # Tools & Temp
 tools/
 temp/
+docs/Formulas_and_Mathematical_Formulations.md
 
 # IDEs
 .vscode/
