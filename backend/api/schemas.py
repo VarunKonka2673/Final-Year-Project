@@ -54,3 +54,57 @@ class RetrainRequestSchema(BaseModel):
     num_samples: Optional[int] = Field(6000, ge=500, le=25000)
     fake_ratio: Optional[float] = Field(0.28, ge=0.05, le=0.60)
     smote_ratio: Optional[float] = Field(0.85, ge=0.5, le=1.0)
+
+class FeedbackSubmissionSchema(BaseModel):
+    account_id: Optional[str] = Field(None)
+    profile_url: Optional[str] = Field(None)
+    username: str = Field(...)
+    platform: Optional[str] = Field("Generic")
+    features: Optional[Dict[str, Any]] = Field(default_factory=dict)
+    model_predicted_fake: int = Field(..., ge=0, le=1)
+    user_verified_fake: int = Field(..., ge=0, le=1)
+    is_correct: bool = Field(...)
+    feedback_notes: Optional[str] = Field(None)
+    user_email: Optional[str] = Field(None)
+    user_id: Optional[str] = Field(None)
+    auto_retrain: Optional[bool] = Field(True)
+
+class HistoryItemSchema(BaseModel):
+    id: Optional[str] = None
+    user_id: str
+    user_email: str
+    user_display_name: Optional[str] = None
+    target: str
+    scan_mode: str
+    platform: Optional[str] = "Generic"
+    timestamp: str
+    verdict: str
+    risk_score: float
+    risk_level: str
+    is_fake: int
+    confidence_pct: float
+    predicted_archetype: Optional[str] = None
+    feedback: Optional[Dict[str, Any]] = None
+    profile_url: Optional[str] = None
+    extracted_features: Optional[Dict[str, Any]] = None
+
+class RegisterRequestSchema(BaseModel):
+    email: str
+    password: str
+    display_name: Optional[str] = ""
+
+class LoginRequestSchema(BaseModel):
+    email: str
+    password: str
+
+class GoogleAuthRequestSchema(BaseModel):
+    email: str
+    displayName: Optional[str] = ""
+    uid: Optional[str] = ""
+    photoURL: Optional[str] = None
+
+class AddAdminRequestSchema(BaseModel):
+    admin_email: str
+    requestor_email: str
+
+

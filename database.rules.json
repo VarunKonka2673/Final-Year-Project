@@ -1,0 +1,24 @@
+{
+  "rules": {
+    "users": {
+      "$uid": {
+        ".read": "auth != null",
+        ".write": "auth != null && (auth.uid === $uid || auth.token.email === 'varunkonka2673@gmail.com')"
+      }
+    },
+    "search_history": {
+      "$historyId": {
+        ".read": "auth != null && (data.child('user_id').val() === auth.uid || auth.token.email === 'varunkonka2673@gmail.com')",
+        ".write": "auth != null"
+      }
+    },
+    "feedback_records": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "admins": {
+      ".read": "auth != null",
+      ".write": "auth != null && auth.token.email === 'varunkonka2673@gmail.com'"
+    }
+  }
+}

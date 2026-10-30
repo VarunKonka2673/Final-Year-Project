@@ -146,16 +146,16 @@ class SocialGuardPreprocessor:
         # Profile completeness score
         df["profile_completeness_score"] = df.apply(self.compute_profile_completeness, axis=1)
 
-        # Clip severe outliers in counts to protect gradient methods, and apply log-transform to highly skewed features
-        df["follower_count"] = np.log1p(np.clip(df["follower_count"], 0, 500000))
-        df["following_count"] = np.log1p(np.clip(df["following_count"], 1, 50000))
-        df["posts_count"] = np.log1p(np.clip(df["posts_count"], 0, 50000))
-        df["posting_frequency_per_day"] = np.log1p(np.clip(df["posting_frequency_per_day"], 0.0, 500.0))
+        # Clip extreme outliers cleanly and apply log1p transform to highly skewed features
+        df["follower_count"] = np.log1p(np.clip(df["follower_count"], 0.0, 1000000000.0))
+        df["following_count"] = np.log1p(np.clip(df["following_count"], 0.0, 200000.0))
+        df["posts_count"] = np.log1p(np.clip(df["posts_count"], 0.0, 250000.0))
+        df["posting_frequency_per_day"] = np.log1p(np.clip(df["posting_frequency_per_day"], 0.0, 1000.0))
         
-        # Log-transform other highly skewed numerical stats
-        df["avg_likes_per_post"] = np.log1p(df["avg_likes_per_post"])
-        df["avg_retweets_or_shares"] = np.log1p(df["avg_retweets_or_shares"])
-        df["follower_to_following_ratio"] = np.log1p(df["follower_to_following_ratio"])
+        # Log-transform other highly skewed numerical stats with safe non-negative clipping
+        df["avg_likes_per_post"] = np.log1p(np.clip(df["avg_likes_per_post"], 0.0, 50000000.0))
+        df["avg_retweets_or_shares"] = np.log1p(np.clip(df["avg_retweets_or_shares"], 0.0, 5000000.0))
+        df["follower_to_following_ratio"] = np.log1p(np.clip(df["follower_to_following_ratio"], 0.0, 10000000.0))
 
         return df
 

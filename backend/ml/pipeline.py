@@ -50,6 +50,20 @@ class SocialGuardPipeline:
                 csv_path = save_default_dataset(DATA_DIR)
                 df = pd.read_csv(csv_path)
 
+        # Merge collected extractor profiles if present
+        collected_path = os.path.join(DATA_DIR, "collected_profiles.csv")
+        if os.path.exists(collected_path):
+            try:
+                df_collected = pd.read_csv(collected_path)
+                if len(df_collected) > 0:
+                    print(f"[Pipeline] Incorporating {len(df_collected)} collected extractor profiles into training.")
+                    # Replicate collected profiles so real features have strong representation
+                    rep = max(1, min(30, int(120 / max(1, len(df_collected)))))
+                    df_replicated = pd.concat([df_collected] * rep, ignore_index=True)
+                    df = pd.concat([df, df_replicated], ignore_index=True)
+            except Exception as e:
+                print(f"[Pipeline] Note merging collected profiles: {e}")
+
         print(f"[Pipeline] Loaded dataset with {len(df)} samples.")
         
         # 1. Feature Preprocessing
@@ -175,18 +189,22 @@ class SocialGuardPipeline:
 
         # 4. Risk Level Categorization
         risk_score = ensemble_res["risk_score"]
-        if risk_score >= 80.0:
-            risk_level = "CRITICAL"
-            risk_badge = "High Confidence Fake / Malicious Bot"
-        elif risk_score >= 55.0:
-            risk_level = "HIGH"
-            risk_badge = "Likely Automated / Suspicious"
-        elif risk_score >= 35.0:
-            risk_level = "MEDIUM"
-            risk_badge = "Borderline / Needs Verification"
+        is_fake = ensemble_res["is_fake"]
+
+        if is_fake == 0:
+            if risk_score >= 50.0:
+                risk_level = "MEDIUM"
+                risk_badge = "Low Risk / Slight Automation Signal"
+            else:
+                risk_level = "LOW"
+                risk_badge = "Authentic / Genuine User"
         else:
-            risk_level = "LOW"
-            risk_badge = "Authentic / Genuine User"
+            if risk_score >= 75.0:
+                risk_level = "CRITICAL"
+                risk_badge = "High Confidence Fake / Malicious Bot"
+            else:
+                risk_level = "HIGH"
+                risk_badge = "Likely Automated / Suspicious"
 
         # 5. Explainable Risk Factors
         risk_factors = self._generate_explainability_factors(engineered_dict, anomaly_res, ensemble_res)
@@ -219,21 +237,25 @@ class SocialGuardPipeline:
 
     def _determine_archetype(self, feat: Dict[str, Any], risk_score: float) -> str:
         """Determines most probable bot or genuine user persona archetype."""
-        if risk_score < 45.0:
-            if feat.get("follower_count", 0) > 10000 or feat.get("is_verified", 0) == 1:
+        if risk_score < 50.0:
+            if feat.get("is_verified", 0) == 1 or feat.get("follower_count", 0) > 100000:
+                return "Genuine-Celebrity"
+            elif feat.get("follower_count", 0) > 10000:
                 return "Genuine-Creator-Influencer"
-            elif feat.get("posting_frequency_per_day", 0) > 0.6:
+            elif feat.get("connections", 0) > 0 or feat.get("experience_count", 0) > 0:
+                return "Genuine-Professional"
+            elif feat.get("posting_frequency_per_day", 0) > 0.4:
                 return "Genuine-Active-User"
             else:
                 return "Genuine-Casual-User"
         else:
-            if feat.get("spam_keyword_score", 0) > 0.4:
+            if feat.get("spam_keyword_score", 0) > 0.3:
                 return "Crypto-Phishing-Bot"
             elif feat.get("posting_frequency_per_day", 0) > 15.0:
                 return "Spam-Promoter-Bot"
-            elif feat.get("following_count", 0) > 3000 and feat.get("follower_count", 0) < 150:
+            elif feat.get("following_count", 0) > 2500 and feat.get("follower_count", 0) < 150:
                 return "Follower-Farm-Bot"
-            elif feat.get("username_digit_count", 0) >= 4 or feat.get("repeated_text_ratio", 0) > 0.4:
+            elif feat.get("repeated_text_ratio", 0) > 0.4:
                 return "Automated-Content-Scraper"
             else:
                 return "Impersonator-Scammer"
@@ -256,6 +278,12 @@ class SocialGuardPipeline:
                 "severity": "SAFE",
                 "detail": f"Account age is {int(age)} days (~{int(age/365)} years), showing sustained genuine presence."
             })
+        elif age >= 90:
+            factors.append({
+                "factor": "Established Account Longevity",
+                "severity": "SAFE",
+                "detail": f"Account age is {int(age)} days, confirming an established authentic social presence."
+            })
 
         # Follower/Following ratio
         ratio = feat.get("follower_to_following_ratio", 0)
@@ -267,6 +295,12 @@ class SocialGuardPipeline:
                 "severity": "CRITICAL",
                 "detail": f"Account follows {int(following)} users but only has {int(followers)} followers (Ratio: {ratio:.3f})."
             })
+        elif 0.3 <= ratio <= 15.0 and following > 0:
+            factors.append({
+                "factor": "Organic Network Follower Ratio",
+                "severity": "SAFE",
+                "detail": f"Follower-to-following ratio exhibits natural bidirectional human social clustering."
+            })
 
         # Posting frequency
         freq = feat.get("posting_frequency_per_day", 0)
@@ -275,6 +309,12 @@ class SocialGuardPipeline:
                 "factor": "Superhuman Posting Velocity",
                 "severity": "CRITICAL",
                 "detail": f"Posting {freq:.1f} posts/day exceeds typical human physiological limits, indicating script automation."
+            })
+        elif 0.01 <= freq <= 3.0:
+            factors.append({
+                "factor": "Human Posting Cadence",
+                "severity": "SAFE",
+                "detail": f"Posting velocity ({freq:.2f} posts/day) matches organic human social media habits."
             })
 
         # NLP Spam keywords
@@ -285,10 +325,16 @@ class SocialGuardPipeline:
                 "severity": "HIGH",
                 "detail": f"Text contains high concentration of known scam keywords (Airdrop/Giveaway/DM triggers)."
             })
+        elif spam_score == 0.0 and feat.get("has_profile_pic", 0) == 1:
+            factors.append({
+                "factor": "Clean Linguistic & Media Profile",
+                "severity": "SAFE",
+                "detail": "Zero spam keywords detected with complete profile media artifacts."
+            })
 
         # Circadian entropy
         entropy = feat.get("active_hours_entropy", 0)
-        if entropy < 1.5:
+        if entropy < 1.5 and entropy > 0:
             factors.append({
                 "factor": "Robotic Activity Uniformity",
                 "severity": "MEDIUM",
@@ -296,7 +342,7 @@ class SocialGuardPipeline:
             })
 
         # Isolation anomaly
-        if anomaly.get("is_anomaly", False):
+        if anomaly.get("is_anomaly", False) and ensemble["is_fake"] == 1:
             factors.append({
                 "factor": "Outlier Behavioral Vector (Isolation Forest)",
                 "severity": "HIGH",

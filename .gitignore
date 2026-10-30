@@ -21,12 +21,19 @@ pc-debug.log
 
 # Node/Frontend
 node_modules/
+frontend/node_modules/
 dist/
 frontend/dist/
 .DS_Store
 frontend/.env
 .env
 .env.local
+
+# Local Data and Databases
+backend/data/*.db
+backend/data/user_history.json
+backend/data/user_feedback.json
+
 
 # Tools & Temp
 tools/
